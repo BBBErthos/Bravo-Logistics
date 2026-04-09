@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bravo — Inventory Receipt Form</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0d1117;--surface:#161b22;--surface2:#1c2128;--border:#30363d;
+  --accent:#f0a500;--accent-dim:rgba(240,165,0,0.12);
+  --text:#e6edf3;--text2:#8b949e;--text3:#484f58;
+  --green:#3fb950;--green-dim:rgba(63,185,80,0.12);
+  --red:#f85149;--red-dim:rgba(248,81,73,0.12);
+  --blue:#58a6ff;--blue-dim:rgba(88,166,255,0.1);
+  --r:6px;--mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;min-height:100vh;line-height:1.6}
+.header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:100}
+.logo{width:28px;height:28px;background:var(--accent);border-radius:4px;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:600;font-size:12px;color:#000}
+.htitle{font-family:var(--mono);font-size:13px;color:var(--text2);margin-left:12px}.htitle span{color:var(--text)}
+.fid{font-family:var(--mono);font-size:11px;color:var(--text3);background:var(--surface2);border:1px solid var(--border);padding:3px 8px;border-radius:var(--r)}
+.main{max-width:900px;margin:0 auto;padding:32px 24px 80px}
+.fhdr{margin-bottom:32px;padding-bottom:24px;border-bottom:1px solid var(--border)}
+.badge{display:inline-flex;align-items:center;gap:6px;background:var(--accent-dim);border:1px solid rgba(240,165,0,0.3);color:var(--accent);font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.1em;padding:4px 10px;border-radius:2px;text-transform:uppercase;margin-bottom:12px}
+.fhdr h1{font-size:24px;font-weight:600;letter-spacing:-.3px;margin-bottom:6px}
+.fhdr p{color:var(--text2);font-size:13px}
+.section{margin-bottom:28px}
+.slabel{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.slabel::after{content:'';flex:1;height:1px;background:var(--border)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+@media(max-width:600px){.g2,.g3{grid-template-columns:1fr}}
+.field{display:flex;flex-direction:column;gap:6px}
+.flabel{font-size:12px;font-weight:500;color:var(--text2);display:flex;align-items:center;gap:4px}
+.req{width:4px;height:4px;background:var(--accent);border-radius:50%;display:inline-block}
+.fhint{font-size:11px;color:var(--text3);margin-top:2px}
+input,select,textarea{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--sans);font-size:14px;padding:9px 12px;width:100%;outline:none;transition:border-color .15s;-webkit-appearance:none}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+input::placeholder,textarea::placeholder{color:var(--text3)}
+select option{background:var(--surface2)}
+textarea{resize:vertical;min-height:80px}
+.disp{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:9px 12px;font-family:var(--mono);font-size:13px;color:var(--text2);min-height:38px}
+.disp.on{color:var(--accent);border-color:rgba(240,165,0,0.3)}
+.items-wrap{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.items-head{display:grid;grid-template-columns:140px 1fr 70px 90px 110px 36px;background:var(--surface2);border-bottom:1px solid var(--border)}
+.ihcell{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);padding:10px 10px;border-right:1px solid var(--border)}
+.ihcell:last-child{border-right:none}
+.irow{display:grid;grid-template-columns:140px 1fr 70px 90px 110px 36px;border-bottom:1px solid var(--border);align-items:center}
+.irow:last-child{border-bottom:none}
+.irow:hover{background:rgba(255,255,255,.02)}
+.icell{padding:7px 10px;border-right:1px solid var(--border);font-size:13px}
+.icell:last-child{border-right:none}
+.iitm{font-family:var(--mono);font-size:11px;color:var(--blue)}
+.idesc{font-size:11px;color:var(--text2);line-height:1.3}
+.iuom{font-family:var(--mono);font-size:11px;color:var(--text3);text-align:center}
+.ipoqty{font-family:var(--mono);font-size:11px;color:var(--text3);text-align:right}
+.irow input[type=number]{padding:5px 8px;font-family:var(--mono);font-size:13px;text-align:right;border-radius:4px}
+.rmv{background:none;border:none;cursor:pointer;color:var(--text3);width:100%;height:36px;font-size:18px;transition:color .15s}
+.rmv:hover{color:var(--red)}
+.empty{padding:40px;text-align:center;color:var(--text3);font-size:13px}
+.loading{padding:32px;text-align:center;color:var(--text3);font-size:13px;display:flex;align-items:center;justify-content:center;gap:10px}
+.spin{width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.po-bar{display:flex;align-items:center;gap:16px;background:var(--blue-dim);border:1px solid rgba(88,166,255,.2);border-radius:var(--r);padding:10px 14px;margin-top:10px;font-size:12px}
+.po-bar strong{font-family:var(--mono);color:var(--blue);font-size:13px}
+.toggle-row{display:flex;align-items:center;gap:12px;padding:12px 0}
+.toggle{position:relative;width:40px;height:22px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.tslider{position:absolute;inset:0;background:var(--border);border-radius:11px;cursor:pointer;transition:background .2s}
+.tslider::before{content:'';position:absolute;width:16px;height:16px;left:3px;top:3px;background:var(--text2);border-radius:50%;transition:transform .2s,background .2s}
+.toggle input:checked+.tslider{background:var(--red)}
+.toggle input:checked+.tslider::before{transform:translateX(18px);background:#fff}
+.dmg-box{background:var(--red-dim);border:1px solid rgba(248,81,73,.3);border-radius:var(--r);padding:16px;margin-top:8px}
+.actions{display:flex;gap:12px;margin-top:32px;padding-top:24px;border-top:1px solid var(--border)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 20px;border-radius:var(--r);font-family:var(--sans);font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all .15s}
+.btn-p{background:var(--accent);color:#000;font-weight:600;flex:1}
+.btn-p:hover{background:#f5b82e}
+.btn-p:disabled{opacity:.4;cursor:not-allowed}
+.btn-s{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}
+.btn-s:hover{border-color:var(--text3);color:var(--text)}
+.toasts{position:fixed;bottom:24px;right:24px;z-index:1000;display:flex;flex-direction:column;gap:8px}
+.toast{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 16px;font-size:13px;box-shadow:0 8px 24px rgba(0,0,0,.4);display:flex;align-items:center;gap:10px;min-width:280px;animation:slideIn .2s ease}
+@keyframes slideIn{from{transform:translateX(20px);opacity:0}to{transform:translateX(0);opacity:1}}
+.toast.success{border-left:3px solid var(--green)}
+.toast.error{border-left:3px solid var(--red)}
+.toast.info{border-left:3px solid var(--accent)}
+.success-screen{display:none;text-align:center;padding:80px 24px}
+.success-screen.vis{display:block}
+.form-wrap.hidden{display:none}
+.sicon{width:64px;height:64px;background:var(--green-dim);border:2px solid var(--green);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:28px}
+.success-screen h2{font-size:22px;margin-bottom:8px}
+.success-screen p{color:var(--text2);margin-bottom:8px}
+.rid{font-family:var(--mono);font-size:18px;color:var(--accent);background:var(--accent-dim);border:1px solid rgba(240,165,0,.3);padding:10px 20px;border-radius:var(--r);display:inline-block;margin:16px 0 28px}
+.sum-tbl{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;text-align:left;margin:0 auto 28px;max-width:640px}
+.srow{display:grid;grid-template-columns:140px 1fr 70px 90px;padding:9px 14px;border-bottom:1px solid var(--border);font-size:12px}
+.srow:last-child{border-bottom:none}
+.srow.hdr{background:var(--surface2);font-family:var(--mono);font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em}
+.prog{display:none;align-items:center;gap:10px;color:var(--text2);font-size:13px;margin-top:16px}
+.prog.vis{display:flex}
+.pbar{flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden}
+.pfill{height:100%;background:var(--accent);border-radius:2px;transition:width .3s ease;width:0%}
+</style>
+</head>
+<body>
+<div class="header">
+  <div style="display:flex;align-items:center">
+    <div class="logo">B</div>
+    <div class="htitle" style="margin-left:12px"><span>BRAVO</span> — Inventory Receipt Form</div>
+  </div>
+  <div class="fid" id="fid">IRS-——</div>
+</div>
+
+<div class="main">
+  <div class="success-screen" id="ss">
+    <div class="sicon">✓</div>
+    <h2>Receipt recorded successfully</h2>
+    <p>Items logged to Bravo — Inventory Receipts.</p>
+    <div class="rid" id="ssid"></div>
+    <p style="font-size:12px;color:var(--text3);margin-bottom:20px">Master inventory balances will update automatically.</p>
+    <div class="sum-tbl" id="ssum"></div>
+    <button class="btn btn-p" onclick="reset()" style="max-width:240px;margin:0 auto">Submit another receipt</button>
+  </div>
+
+  <div class="form-wrap" id="fw">
+    <div class="fhdr">
+      <div class="badge">▸ Inventory Receipt</div>
+      <h1>Log Incoming Material</h1>
+      <p>Select a PO number to load its line items. Enter quantities received — 0 is acceptable. Blank rows are skipped.</p>
+    </div>
+
+    <div class="section">
+      <div class="slabel">Receipt details</div>
+      <div class="g3" style="margin-bottom:14px">
+        <div class="field">
+          <label class="flabel">Date <span class="req"></span></label>
+          <input type="date" id="rDate"/>
+        </div>
+        <div class="field">
+          <label class="flabel">Receiving yard <span class="req"></span></label>
+          <select id="rYard">
+            <option value="">Select yard...</option>
+            <option>Yard A</option><option>Yard B</option><option>Yard C</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="flabel">Receipt type <span class="req"></span></label>
+          <select id="rType" onchange="typeChange()">
+            <option value="">Select type...</option>
+            <option>Delivery</option><option>Team Return</option>
+          </select>
+        </div>
+      </div>
+      <div class="g2">
+        <div class="field">
+          <label class="flabel">Bill of lading number <span class="req" id="bolReq"></span></label>
+          <input type="text" id="rBOL" placeholder="Enter BOL number"/>
+          <div class="fhint">From driver paperwork. Leave blank for team returns.</div>
+        </div>
+        <div class="field">
+          <label class="flabel">Yard leader name <span class="req"></span></label>
+          <input type="text" id="rLeader" placeholder="Your full name"/>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="slabel">Purchase order</div>
+      <div class="field">
+        <label class="flabel">PO number <span class="req"></span></label>
+        <select id="rPO" onchange="loadItems()">
+          <option value="">Select PO number...</option>
+        </select>
+        <div class="fhint">Items for this PO will load automatically below.</div>
+        <div id="mmStatus" style="margin-top:6px;font-size:11px;color:var(--text3)">Loading material master...</div>
+      </div>
+      <div id="poBar" class="po-bar" style="display:none">
+        <strong id="poNum"></strong>
+        <span id="poCnt" style="color:var(--text2)"></span>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="slabel">Line items</div>
+      <div class="items-wrap" id="iWrap">
+        <div class="empty" id="iEmpty">
+          <div style="font-size:28px;opacity:.3;margin-bottom:8px">📋</div>
+          Select a PO number above to load its line items
+        </div>
+        <div class="loading" id="iLoad" style="display:none"><div class="spin"></div>Loading items...</div>
+        <div id="iTable" style="display:none">
+          <div class="items-head">
+            <div class="ihcell">Item #</div>
+            <div class="ihcell">Description</div>
+            <div class="ihcell">UOM</div>
+            <div class="ihcell">PO Qty</div>
+            <div class="ihcell">Qty Received</div>
+            <div class="ihcell"></div>
+          </div>
+          <div id="iBody"></div>
+        </div>
+      </div>
+      <div class="fhint" style="margin-top:8px">Enter 0 for items not received. Leave blank to skip that item entirely.</div>
+    </div>
+
+    <div class="section">
+      <div class="slabel">Damage assessment</div>
+      <div class="toggle-row">
+        <label class="toggle"><input type="checkbox" id="dmgToggle" onchange="dmgChange()"/><span class="tslider"></span></label>
+        <span style="font-size:13px;color:var(--text2)">Damage was observed on this delivery</span>
+      </div>
+      <div id="dmgBox" class="dmg-box" style="display:none">
+        <div class="field">
+          <label class="flabel" style="color:var(--red)">Describe the damage <span class="req"></span></label>
+          <textarea id="dmgNotes" placeholder="Describe affected items, nature and severity of damage. An alert will be sent to logistics@erthos.com immediately." rows="4"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="slabel">Notes</div>
+      <div class="field">
+        <textarea id="rNotes" placeholder="Any additional notes about this delivery..." rows="3"></textarea>
+      </div>
+    </div>
+
+    <div class="prog" id="prog">
+      <span id="progLbl">Submitting...</span>
+      <div class="pbar"><div class="pfill" id="pfill"></div></div>
+      <span id="progCnt"></span>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-s" onclick="clearForm()">Clear</button>
+      <button class="btn btn-p" id="subBtn" onclick="submit()">Submit receipt</button>
+    </div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<script>
+// ── Config ────────────────────────────────────────────────────────────────────
+const TOKEN     = "eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjY0MjAyOTczNSwiYWFpIjoxMSwidWlkIjoxMDE2NTU1NDEsImlhZCI6IjIwMjYtMDQtMDZUMTY6MTU6NDEuMDAwWiIsInBlciI6Im1lOndyaXRlIiwiYWN0aWQiOjM0MDM3NTMzLCJyZ24iOiJ1c2UxIn0.xhq8Fz24KVtwvLHPuxUR4lZ6Y_WoZHvximfIa9hmnYM";
+const MM_BOARD  = "18407396726";
+const REC_BOARD = "18407084838";
+
+// ── Hardcoded Receipts board column IDs ──────────────────────────────────────
+const REC_COL = {
+  date:        "date_mm21gh7a",
+  yard:        "color_mm2620j2",      // status → {label:"..."}
+  yardLeader:  "text_mm25gkyy",
+  poNumber:    "text_mm28nrrw",       // text
+  itemNumber:  "text_mm28txsc",
+  qtyReceived: "numeric_mm219b2v",
+  receiptType: "color_mm26z52m",      // status → {label:"..."}
+  bol:         "text_mm25kh7",
+  damageFlag:  "color_mm216m91",      // status → {label:"..."}
+  describeDmg: "text_mm25a8cn",
+  uom:         "text_mm2529ab"
+};
+
+// Receipts board group IDs (Yard A/B/C) — discovered at runtime
+const YARD_GROUPS = { "Yard A": "topics", "Yard B": "group_mm2129k8", "Yard C": "group_mm217594" };
+
+// ── Hardcoded Material Master column IDs ─────────────────────────────────────
+const MM_COL = {
+  itemNumber:  "text_mm25tw3r",
+  yardAQty:    "numeric_mm28esrx",
+  yardBQty:    "numeric_mm28rzz8",
+  yardCQty:    "numeric_mm28v4wf"
+};
+
+// Yard name → MM column ID mapping
+const YARD_QTY_COL = {
+  "Yard A": MM_COL.yardAQty,
+  "Yard B": MM_COL.yardBQty,
+  "Yard C": MM_COL.yardCQty
+};
+
+let mmItems  = [];   // { itemNumber, mmItemId, description, uom, poQty, poNumber, yardAQty, yardBQty, yardCQty }
+let poItems  = [];   // filtered to selected PO
+
+// ── GQL helper ────────────────────────────────────────────────────────────────
+async function gql(query, variables = {}) {
+  const r = await fetch("https://api.monday.com/v2", {
+    method: "POST",
+    headers: {
+      "Authorization": TOKEN,
+      "Content-Type":  "application/json",
+      "API-Version":   "2024-01"
+    },
+    body: JSON.stringify({ query, variables })
+  });
+  const d = await r.json();
+  if (d.errors) throw new Error(d.errors[0].message);
+  return d.data;
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+document.addEventListener("DOMContentLoaded", init);
+window.addEventListener("load", init);
+let _inited = false;
+async function init() {
+  if (_inited) return;
+  _inited = true;
+  setDate(); genId();
+  await loadMM();
+}
+
+function setDate() {
+  document.getElementById("rDate").value = new Date().toISOString().split("T")[0];
+}
+
+function genId() {
+  const d = new Date();
+  const s = `${d.getFullYear()}${p2(d.getMonth()+1)}${p2(d.getDate())}`;
+  document.getElementById("fid").textContent = `IRS-${s}-${String(Math.floor(Math.random()*900)+100)}`;
+}
+
+function p2(n) { return String(n).padStart(2, "0"); }
+
+// ── Load Material Master ──────────────────────────────────────────────────────
+// Load item ID, item number, yard qtys — everything needed for inventory updates
+async function loadMM() {
+  try {
+    let cursor = null, all = [], page = 0;
+    do {
+      page++;
+      const q = cursor
+        ? `query { boards(ids:[${MM_BOARD}]) { items_page(limit:200,cursor:"${cursor}") { cursor items { id name column_values { id title text } } } } }`
+        : `query { boards(ids:[${MM_BOARD}]) { items_page(limit:200) { cursor items { id name column_values { id title text } } } } }`;
+      const d = await gql(q);
+      const pg = d.boards[0].items_page;
+      cursor = pg.cursor;
+      pg.items.forEach(item => {
+        const cv = {};
+        item.column_values.forEach(c => { cv[c.title] = c.text; });
+        all.push({
+          mmItemId:    item.id,
+          poNumber:    item.name,
+          itemNumber:  cv["Item Number"]  || "",
+          description: cv["Description"] || "",
+          uom:         cv["UOM"]          || "EA",
+          poQty:       cv["PO Quantity"]  || "",
+          yardAQty:    parseFloat(cv["Yard A Qty"] || "0") || 0,
+          yardBQty:    parseFloat(cv["Yard B Qty"] || "0") || 0,
+          yardCQty:    parseFloat(cv["Yard C Qty"] || "0") || 0
+        });
+      });
+    } while (cursor && page < 10);
+    mmItems = all;
+    buildPODropdown();
+    toast(`Material master loaded — ${all.length} line items`, "info");
+    const st = document.getElementById("mmStatus");
+    if (st) { st.textContent = `✓ ${all.length} items loaded`; st.style.color = "var(--accent)"; }
+  } catch(e) {
+    toast("Could not load material master: " + e.message, "error");
+    // Show error directly in the PO dropdown so it's impossible to miss
+    const sel = document.getElementById("rPO");
+    if (sel) sel.innerHTML = `<option value="">⚠ Load failed: ${e.message}</option>`;
+    const st = document.getElementById("mmStatus");
+    if (st) { st.textContent = `✗ Failed: ${e.message}`; st.style.color = "var(--red)"; }
+    console.error("loadMM error:", e);
+  }
+}
+
+function buildPODropdown() {
+  const pos = [...new Set(mmItems.map(i => i.poNumber).filter(Boolean))].sort();
+  const sel = document.getElementById("rPO");
+  sel.innerHTML = '<option value="">Select PO number...</option>';
+  pos.forEach(po => {
+    const o = document.createElement("option");
+    o.value = o.textContent = po;
+    sel.appendChild(o);
+  });
+}
+
+// ── Load items for selected PO ────────────────────────────────────────────────
+function loadItems() {
+  const po = document.getElementById("rPO").value;
+  document.getElementById("poBar").style.display  = "none";
+  document.getElementById("iEmpty").style.display = "none";
+  document.getElementById("iTable").style.display = "none";
+  if (!po) { document.getElementById("iEmpty").style.display = "block"; return; }
+  document.getElementById("iLoad").style.display = "flex";
+  poItems = mmItems.filter(i => i.poNumber === po);
+  setTimeout(() => {
+    document.getElementById("iLoad").style.display = "none";
+    if (!poItems.length) {
+      document.getElementById("iEmpty").style.display = "block";
+      document.getElementById("iEmpty").innerHTML =
+        '<div style="font-size:24px;opacity:.3;margin-bottom:8px">⚠️</div>No items found for ' + po;
+      return;
+    }
+    renderTable();
+    document.getElementById("poBar").style.display = "flex";
+    document.getElementById("poNum").textContent   = po;
+    document.getElementById("poCnt").textContent   = poItems.length + " line items";
+  }, 250);
+}
+
+function renderTable() {
+  const body = document.getElementById("iBody");
+  body.innerHTML = "";
+  poItems.forEach((item, i) => {
+    const row = document.createElement("div");
+    row.className = "irow";
+    row.innerHTML = `
+      <div class="icell"><div class="iitm">${item.itemNumber}</div></div>
+      <div class="icell"><div class="idesc">${item.description}</div></div>
+      <div class="icell iuom">${item.uom}</div>
+      <div class="icell ipoqty">${item.poQty}</div>
+      <div class="icell"><input type="number" min="0" step="1" placeholder="—" id="q${i}" /></div>
+      <div class="icell"><button class="rmv" onclick="clearQ(${i})" title="Clear">×</button></div>`;
+    body.appendChild(row);
+  });
+  document.getElementById("iTable").style.display = "block";
+}
+
+function clearQ(i) { const el = document.getElementById("q" + i); if (el) el.value = ""; }
+
+// ── UI helpers ────────────────────────────────────────────────────────────────
+function typeChange() {
+  const t = document.getElementById("rType").value;
+  document.getElementById("bolReq").style.display  = t === "Team Return" ? "none" : "inline-block";
+  document.getElementById("rBOL").placeholder      = t === "Team Return"
+    ? "N/A — not required for returns" : "Enter BOL number";
+}
+
+function dmgChange() {
+  document.getElementById("dmgBox").style.display =
+    document.getElementById("dmgToggle").checked ? "block" : "none";
+}
+
+// ── Validate ──────────────────────────────────────────────────────────────────
+function validate() {
+  const errs = [];
+  if (!document.getElementById("rDate").value)         errs.push("Date is required");
+  if (!document.getElementById("rYard").value)         errs.push("Receiving yard is required");
+  if (!document.getElementById("rType").value)         errs.push("Receipt type is required");
+  if (!document.getElementById("rLeader").value.trim()) errs.push("Yard leader name is required");
+  if (!document.getElementById("rPO").value)           errs.push("PO number is required");
+  if (document.getElementById("rType").value === "Delivery" &&
+      !document.getElementById("rBOL").value.trim())   errs.push("BOL number is required for deliveries");
+  if (document.getElementById("dmgToggle").checked &&
+      !document.getElementById("dmgNotes").value.trim()) errs.push("Please describe the damage observed");
+  const hasQty = poItems.some((_, i) => {
+    const v = document.getElementById("q" + i);
+    return v && v.value !== "";
+  });
+  if (!hasQty) errs.push("Enter a quantity for at least one item (0 is acceptable)");
+  return errs;
+}
+
+// ── Update Material Master inventory ─────────────────────────────────────────
+// Finds the MM row by item number and adds received qty to the correct yard column
+async function updateMMInventory(itemNumber, qtyReceived, yard) {
+  // Find the MM item — match by item number
+  const mmItem = mmItems.find(i => i.itemNumber === itemNumber);
+  if (!mmItem) {
+    toast(`⚠ No MM row found for ${itemNumber} — inventory not updated`, "error");
+    return false;
+  }
+
+  const yardColId = YARD_QTY_COL[yard];
+  if (!yardColId) {
+    toast(`⚠ Unknown yard "${yard}" — inventory not updated for ${itemNumber}`, "error");
+    return false;
+  }
+
+  // Calculate new qty: current + received
+  const currentQty = yard === "Yard A" ? mmItem.yardAQty
+                   : yard === "Yard B" ? mmItem.yardBQty
+                   : mmItem.yardCQty;
+  const newQty = currentQty + qtyReceived;
+
+  try {
+    await gql(
+      `mutation($itemId:ID!, $boardId:ID!, $colId:String!, $val:JSON!) {
+         change_simple_column_value(item_id:$itemId, board_id:$boardId, column_id:$colId, value:$val) { id }
+       }`,
+      {
+        itemId:  mmItem.mmItemId,
+        boardId: MM_BOARD,
+        colId:   yardColId,
+        val:     String(newQty)
+      }
+    );
+    // Update local cache so subsequent items in same submission see correct value
+    if (yard === "Yard A") mmItem.yardAQty = newQty;
+    else if (yard === "Yard B") mmItem.yardBQty = newQty;
+    else mmItem.yardCQty = newQty;
+    return true;
+  } catch(e) {
+    toast(`⚠ Inventory update failed for ${itemNumber}: ${e.message}`, "error");
+    return false;
+  }
+}
+
+// ── Submit ────────────────────────────────────────────────────────────────────
+async function submit() {
+  const errs = validate();
+  if (errs.length) { toast(errs[0], "error"); return; }
+
+  const btn = document.getElementById("subBtn");
+  btn.disabled = true; btn.textContent = "Submitting...";
+
+  const toSubmit = [];
+  poItems.forEach((item, i) => {
+    const el = document.getElementById("q" + i);
+    if (el && el.value !== "") toSubmit.push({ ...item, qty: parseInt(el.value) || 0 });
+  });
+
+  const date   = document.getElementById("rDate").value;
+  const yard   = document.getElementById("rYard").value;
+  const type   = document.getElementById("rType").value;
+  const po     = document.getElementById("rPO").value;
+  const bol    = document.getElementById("rBOL").value.trim();
+  const leader = document.getElementById("rLeader").value.trim();
+  const dmg    = document.getElementById("dmgToggle").checked ? "Damage Noted" : "No Damage";
+  const dmgN   = document.getElementById("dmgNotes").value.trim();
+  const notes  = document.getElementById("rNotes").value.trim();
+
+  const dateStr = date.replace(/-/g, "");
+  const baseRef = `${dateStr}_REC_${String(Math.floor(Math.random()*900)+100)}`;
+
+  const prog    = document.getElementById("prog");
+  const pfill   = document.getElementById("pfill");
+  const progLbl = document.getElementById("progLbl");
+  const progCnt = document.getElementById("progCnt");
+  prog.classList.add("vis");
+
+  const groupId = YARD_GROUPS[yard] || null;
+
+  let submitted = 0, invUpdated = 0;
+  const results = [];
+
+  for (let i = 0; i < toSubmit.length; i++) {
+    const item     = toSubmit[i];
+    const itemName = `${baseRef}-${p2(i+1)}`;
+    progLbl.textContent = `Submitting item ${i+1} of ${toSubmit.length}...`;
+    pfill.style.width   = ((i / toSubmit.length) * 0.7 * 100) + "%"; // 0-70% for receipt creation
+    progCnt.textContent = `${i}/${toSubmit.length}`;
+
+    // Build receipt board column values
+    const colVals = {
+      [REC_COL.date]:        date,
+      [REC_COL.yard]:        { label: yard },
+      [REC_COL.yardLeader]:  leader,
+      [REC_COL.poNumber]:    po,
+      [REC_COL.itemNumber]:  item.itemNumber,
+      [REC_COL.qtyReceived]: item.qty,
+      [REC_COL.receiptType]: { label: type },
+      [REC_COL.damageFlag]:  { label: dmg },
+      [REC_COL.uom]:         item.uom
+    };
+    if (bol)   colVals[REC_COL.bol]        = bol;
+    if (dmgN)  colVals[REC_COL.describeDmg] = dmgN;
+    if (notes) {
+      const notesId = Object.keys(REC_COL).find(k => k.toLowerCase().includes("note"));
+      if (notesId) colVals[REC_COL[notesId]] = notes;
+    }
+
+    try {
+      const mut = groupId
+        ? `mutation($b:ID!,$g:String!,$n:String!,$cv:JSON!){create_item(board_id:$b,group_id:$g,item_name:$n,column_values:$cv){id name}}`
+        : `mutation($b:ID!,$n:String!,$cv:JSON!){create_item(board_id:$b,item_name:$n,column_values:$cv){id name}}`;
+      const vars = groupId
+        ? { b: REC_BOARD, g: groupId, n: itemName, cv: JSON.stringify(colVals) }
+        : { b: REC_BOARD,             n: itemName, cv: JSON.stringify(colVals) };
+      await gql(mut, vars);
+      submitted++;
+      results.push({ itemName, item });
+    } catch(e) {
+      toast(`${item.itemNumber} receipt failed: ${e.message}`, "error");
+    }
+  }
+
+  // ── Phase 2: Update Material Master inventory ─────────────────────────────
+  progLbl.textContent = "Updating inventory...";
+  for (let i = 0; i < toSubmit.length; i++) {
+    const item = toSubmit[i];
+    pfill.style.width = (70 + ((i / toSubmit.length) * 30)) + "%"; // 70-100%
+    if (item.qty > 0) {
+      const ok = await updateMMInventory(item.itemNumber, item.qty, yard);
+      if (ok) invUpdated++;
+    }
+  }
+
+  pfill.style.width   = "100%";
+  progCnt.textContent = `${submitted}/${toSubmit.length}`;
+  await new Promise(r => setTimeout(r, 400));
+
+  if (submitted > 0) showSuccess(baseRef, results, yard, po, invUpdated);
+  else {
+    toast("No items submitted. Please try again.", "error");
+    btn.disabled    = false;
+    btn.textContent = "Submit receipt";
+    prog.classList.remove("vis");
+  }
+}
+
+// ── Success screen ────────────────────────────────────────────────────────────
+function showSuccess(ref, results, yard, po, invUpdated) {
+  document.getElementById("fw").classList.add("hidden");
+  document.getElementById("ss").classList.add("vis");
+  document.getElementById("ssid").textContent = ref;
+
+  let html = `<div class="srow hdr"><div>Item #</div><div>Description</div><div>UOM</div><div>Qty</div></div>`;
+  results.forEach(r => {
+    html += `<div class="srow">
+      <div style="font-family:var(--mono);font-size:11px;color:var(--blue)">${r.item.itemNumber}</div>
+      <div style="font-size:11px;color:var(--text2)">${(r.item.description||"").substring(0,45)}</div>
+      <div style="font-family:var(--mono);font-size:11px;color:var(--text3)">${r.item.uom}</div>
+      <div style="font-family:var(--mono);font-size:13px;color:var(--green);text-align:right">${r.item.qty}</div>
+    </div>`;
+  });
+  document.getElementById("ssum").innerHTML = html;
+  toast(`${results.length} items received at ${yard} — ${invUpdated} inventory balances updated`, "success");
+}
+
+// ── Reset / clear ─────────────────────────────────────────────────────────────
+function reset() {
+  document.getElementById("fw").classList.remove("hidden");
+  document.getElementById("ss").classList.remove("vis");
+  clearForm(); genId();
+}
+
+function clearForm() {
+  setDate();
+  ["rYard","rType","rPO"].forEach(id => document.getElementById(id).value = "");
+  ["rBOL","rLeader","rNotes"].forEach(id => document.getElementById(id).value = "");
+  document.getElementById("dmgToggle").checked = false;
+  document.getElementById("dmgNotes").value    = "";
+  document.getElementById("dmgBox").style.display   = "none";
+  document.getElementById("iEmpty").style.display   = "block";
+  document.getElementById("iEmpty").innerHTML =
+    '<div style="font-size:28px;opacity:.3;margin-bottom:8px">📋</div>Select a PO number above to load its line items';
+  document.getElementById("iTable").style.display   = "none";
+  document.getElementById("poBar").style.display    = "none";
+  document.getElementById("subBtn").disabled        = false;
+  document.getElementById("subBtn").textContent     = "Submit receipt";
+  document.getElementById("prog").classList.remove("vis");
+  poItems = [];
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function toast(msg, type = "info") {
+  const c = document.getElementById("toasts");
+  const t = document.createElement("div");
+  t.className = `toast ${type}`;
+  const ic = type === "success" ? "✓" : type === "error" ? "✕" : "ℹ";
+  t.innerHTML = `<span style="font-family:var(--mono)">${ic}</span> ${msg}`;
+  c.appendChild(t);
+  setTimeout(() => {
+    t.style.cssText = "opacity:0;transform:translateX(20px);transition:all .3s";
+    setTimeout(() => t.remove(), 300);
+  }, type === "error" ? 6000 : 4000);
+}
+</script>
+</body>
+</html>
