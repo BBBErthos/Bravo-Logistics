@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Bravo API Debug</title>
+<style>
+body { background: #0d1117; color: #e6edf3; font-family: monospace; padding: 24px; font-size: 13px; }
+h2 { color: #f0a500; margin-bottom: 16px; }
+.box { background: #161b22; border: 1px solid #30363d; border-radius: 6px; padding: 16px; margin-bottom: 16px; }
+.ok { color: #3fb950; }
+.err { color: #f85149; }
+.info { color: #58a6ff; }
+.warn { color: #f0a500; }
+pre { white-space: pre-wrap; word-break: break-all; font-size: 11px; margin-top: 8px; }
+button { background: #f0a500; color: #000; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; margin-right: 8px; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<h2>Bravo — API Connection Debug</h2>
+
+<div class="box">
+  <div>Token: <span class="info" id="tokenDisplay"></span></div>
+  <div>Material Master Board ID: <span class="info">18407396726</span></div>
+  <div>Receipts Board ID: <span class="info">18407084838</span></div>
+  <div>MTF Board ID: <span class="info">18407069511</span></div>
+</div>
+
+<button onclick="testToken()">1. Test Token</button>
+<button onclick="testBoardAccess()">2. Test Board Access</button>
+<button onclick="testFirstItems()">3. Load First 5 Items</button>
+<button onclick="testColumns()">4. Get MTF/Receipts Columns</button>
+<button onclick="testMMColumns()">5. Get Material Master Columns</button>
+<button onclick="testDeliveryColumns()">6. Get Delivery Schedule Columns</button>
+<button onclick="clearLog()">Clear Log</button>
+
+<div class="box" id="log">
+  <div class="info">Click the buttons above to run tests...</div>
+</div>
+
+<script>
+const TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjY0MjAyOTczNSwiYWFpIjoxMSwidWlkIjoxMDE2NTU1NDEsImlhZCI6IjIwMjYtMDQtMDZUMTY6MTU6NDEuMDAwWiIsInBlciI6Im1lOndyaXRlIiwiYWN0aWQiOjM0MDM3NTMzLCJyZ24iOiJ1c2UxIn0.xhq8Fz24KVtwvLHPuxUR4lZ6Y_WoZHvximfIa9hmnYM";
+const MM_BOARD  = "18407396726";
+const REC_BOARD = "18407084838";
+const MTF_BOARD = "18407069511";
+const DEL_BOARD = "18407062173";
+
+document.getElementById("tokenDisplay").textContent = TOKEN.substring(0,40) + "...";
+
+function log(msg, type="info") {
+  const el = document.getElementById("log");
+  const line = document.createElement("div");
+  line.className = type;
+  line.innerHTML = `[${new Date().toLocaleTimeString()}] ${msg}`;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+
+function logPre(obj) {
+  const el = document.getElementById("log");
+  const pre = document.createElement("pre");
+  pre.textContent = JSON.stringify(obj, null, 2);
+  el.appendChild(pre);
+}
+
+function clearLog() {
+  document.getElementById("log").innerHTML = '<div class="info">Log cleared.</div>';
+}
+
+async function gql(query, variables={}) {
+  const r = await fetch("https://api.monday.com/v2", {
+    method: "POST",
+    headers: {
+      "Authorization": TOKEN,
+      "Content-Type": "application/json",
+      "API-Version": "2024-01"
+    },
+    body: JSON.stringify({query, variables})
+  });
+  log(`HTTP Status: ${r.status} ${r.statusText}`, r.ok ? "ok" : "err");
+  const text = await r.text();
+  log(`Raw response length: ${text.length} chars`);
+  try {
+    const data = JSON.parse(text);
+    if(data.errors) {
+      log("GraphQL errors: " + JSON.stringify(data.errors), "err");
+      return null;
+    }
+    return data.data;
+  } catch(e) {
+    log("JSON parse error: " + e.message, "err");
+    log("Raw response: " + text.substring(0, 500), "warn");
+    return null;
+  }
+}
+
+async function testToken() {
+  log("Testing API token...", "info");
+  try {
+    const d = await gql(`query { me { id name email account { id name } } }`);
+    if(d) {
+      log(`✓ Token valid! User: ${d.me.name} (${d.me.email})`, "ok");
+      log(`✓ Account: ${d.me.account.name} (ID: ${d.me.account.id})`, "ok");
+    }
+  } catch(e) {
+    log("✗ Token test failed: " + e.message, "err");
+  }
+}
+
+async function testBoardAccess() {
+  log("Testing board access...", "info");
+  try {
+    const d = await gql(`query { boards(ids:[${MM_BOARD}]) { id name description items_count } }`);
+    if(d && d.boards && d.boards.length > 0) {
+      const b = d.boards[0];
+      log(`✓ Material Master board found: "${b.name}" — ${b.items_count} items`, "ok");
+    } else {
+      log("✗ Board not found or no access. Response:", "err");
+      logPre(d);
+    }
+  } catch(e) {
+    log("✗ Board access failed: " + e.message, "err");
+  }
+}
+
+async function testFirstItems() {
+  log("=== Trying approach 1: items_page with column_values { id text } ===", "info");
+  await tryQuery1();
+  log("=== Trying approach 2: items_page with column_values { id value } ===", "info");
+  await tryQuery2();
+  log("=== Trying approach 3: items (legacy) ===", "info");
+  await tryQuery3();
+}
+
+async function tryQuery1() {
+  try {
+    const r = await fetch("https://api.monday.com/v2", {
+      method:"POST",
+      headers:{"Authorization":TOKEN,"Content-Type":"application/json","API-Version":"2024-01"},
+      body: JSON.stringify({query:`query { boards(ids:[${MM_BOARD}]) { items_page(limit:3) { items { id name column_values { id text } } } } }`})
+    });
+    const t = await r.text();
+    log("v2024-01 response: " + t.substring(0,300), "info");
+  } catch(e) { log("approach 1 error: "+e.message, "err"); }
+}
+
+async function tryQuery2() {
+  try {
+    const r = await fetch("https://api.monday.com/v2", {
+      method:"POST",
+      headers:{"Authorization":TOKEN,"Content-Type":"application/json","API-Version":"2025-01"},
+      body: JSON.stringify({query:`query { boards(ids:[${MM_BOARD}]) { items_page(limit:3) { items { id name column_values { id text } } } } }`})
+    });
+    const t = await r.text();
+    log("v2025-01 response: " + t.substring(0,300), "info");
+  } catch(e) { log("approach 2 error: "+e.message, "err"); }
+}
+
+async function tryQuery3() {
+  try {
+    const r = await fetch("https://api.monday.com/v2", {
+      method:"POST",
+      headers:{"Authorization":TOKEN,"Content-Type":"application/json"},
+      body: JSON.stringify({query:`query { boards(ids:[${MM_BOARD}]) { items_page(limit:3) { items { id name column_values { id text } } } } }`})
+    });
+    const t = await r.text();
+    log("no version header response: " + t.substring(0,300), "info");
+  } catch(e) { log("approach 3 error: "+e.message, "err"); }
+}
+
+async function testColumns() {
+  clearLog();
+
+  log("━━━━━━━━━━━━ MTF BOARD COLUMNS ━━━━━━━━━━━━", "warn");
+  try {
+    const raw = await fetch("https://api.monday.com/v2", {
+      method:"POST",
+      headers:{"Authorization":TOKEN,"Content-Type":"application/json","API-Version":"2024-01"},
+      body: JSON.stringify({query:`query { boards(ids:[${MTF_BOARD}]) { name columns { id title type } groups { id title } } }`})
+    });
+    const text = await raw.text();
+    log("HTTP " + raw.status + " — " + text.length + " chars", raw.ok?"ok":"err");
+    const json = JSON.parse(text);
+    if(json.errors) { log("GraphQL error: " + JSON.stringify(json.errors), "err"); }
+    else if(json.data && json.data.boards && json.data.boards[0]) {
+      const b = json.data.boards[0];
+      log(`Board: "${b.name}"`, "ok");
+      log("Columns:", "ok");
+      b.columns.forEach(c => log(`  "${c.title}"  →  id: ${c.id}  (${c.type})`, "info"));
+      log("Groups:", "ok");
+      b.groups.forEach(g  => log(`  "${g.title}"  →  id: ${g.id}`, "info"));
+    } else {
+      log("No board data. Raw: " + text.substring(0,400), "warn");
+    }
+  } catch(e) { log("MTF fetch error: " + e.message, "err"); }
+
+  log("━━━━━━━━━━━━ MTF STATUS LABELS ━━━━━━━━━━━━", "warn");
+  try {
+    const raw = await fetch("https://api.monday.com/v2", {
+      method:"POST",
+      headers:{"Authorization":TOKEN,"Content-Type":"application/json","API-Version":"2024-01"},
+      body: JSON.stringify({query:`query { boards(ids:[${MTF_BOARD}]) { columns { id title type settings_str } } }`})
+    });
+    const json = JSON.parse(await raw.text());
+    if(json.errors) { log("settings_str error: " + JSON.stringify(json.errors), "err"); }
+    else if(json.data && json.data.boards[0]) {
+      json.data.boards[0].columns.forEach(c => {
+        if(c.type === "color" || c.type === "dropdown") {
+          try {
+            const s = JSON.parse(c.settings_str);
+            if(s.labels) {
+              const labels = Object.entries(s.labels).map(([idx,lbl])=>`"${lbl}"→${idx}`).join("  |  ");
+              log(`  "${c.title}": ${labels}`, "info");
+            } else if(s.listValues) {
+              const labels = s.listValues.map(l=>`"${l.value}"→${l.id}`).join("  |  ");
+              log(`  "${c.title}": ${labels}`, "info");
+            }
+          } catch(ex){ log(`  "${c.title}": could not parse settings`, "warn"); }
+        }
+      });
+    }
+  } catch(e) { log("settings_str error: " + e.message, "err"); }
+
+  log("━━━━━━━━━━━━ RECEIPTS BOARD COLUMNS ━━━━━━━━━━━━", "warn");
+  try {
+    const raw = await fetch("https://api.monday.com/v2", {
+      method:"POST",
+      headers:{"Authorization":TOKEN,"Content-Type":"application/json","API-Version":"2024-01"},
+      body: JSON.stringify({query:`query { boards(ids:[${REC_BOARD}]) { name columns { id title type } groups { id title } } }`})
+    });
+    const json = JSON.parse(await raw.text());
+    if(json.errors) { log("GraphQL error: " + JSON.stringify(json.errors), "err"); }
+    else if(json.data && json.data.boards[0]) {
+      const b = json.data.boards[0];
+      log(`Board: "${b.name}"`, "ok");
+      b.columns.forEach(c => log(`  "${c.title}"  →  id: ${c.id}  (${c.type})`, "info"));
+      log("Groups:", "ok");
+      b.groups.forEach(g  => log(`  "${g.title}"  →  id: ${g.id}`, "info"));
+    }
+  } catch(e) { log("Receipts fetch error: " + e.message, "err"); }
+}
+
+async function testMMColumns() {
+  clearLog();
+  log("━━━━━━━━━━━━ MATERIAL MASTER COLUMNS ━━━━━━━━━━━━", "warn");
+  try {
+    const raw = await fetch("https://api.monday.com/v2", {
+      method:"POST",
+      headers:{"Authorization":TOKEN,"Content-Type":"application/json","API-Version":"2024-01"},
+      body: JSON.stringify({query:`query { boards(ids:[${MM_BOARD}]) { name columns { id title type } } }`})
+    });
+    const text = await raw.text();
+    log("HTTP " + raw.status + " — " + text.length + " chars", raw.ok?"ok":"err");
+    const json = JSON.parse(text);
+    if(json.errors) { log("GraphQL error: " + JSON.stringify(json.errors), "err"); return; }
+    const b = json.data.boards[0];
+    log(`Board: "${b.name}"`, "ok");
+    b.columns.forEach(c => log(`  "${c.title}"  →  id: ${c.id}  (${c.type})`, "info"));
+  } catch(e) { log("Error: " + e.message, "err"); }
+}
+
+
+async function testDeliveryColumns() {
+  clearLog();
+  log("━━━━━━━━━━━━ DELIVERY SCHEDULE BOARD ━━━━━━━━━━━━", "warn");
+  try {
+    const raw = await fetch("https://api.monday.com/v2", {
+      method:"POST",
+      headers:{"Authorization":TOKEN,"Content-Type":"application/json","API-Version":"2024-01"},
+      body: JSON.stringify({query:`query { boards(ids:[${DEL_BOARD}]) { name columns { id title type } groups { id title } } }`})
+    });
+    const text = await raw.text();
+    log("HTTP " + raw.status + " — " + text.length + " chars", raw.ok?"ok":"err");
+    const json = JSON.parse(text);
+    if(json.errors) { log("GraphQL error: " + JSON.stringify(json.errors), "err"); return; }
+    const b = json.data.boards[0];
+    log(`Board: "${b.name}"`, "ok");
+    log("Columns:", "ok");
+    b.columns.forEach(c => log(`  "${c.title}"  →  id: ${c.id}  (${c.type})`, "info"));
+    log("Groups:", "ok");
+    b.groups.forEach(g => log(`  "${g.title}"  →  id: ${g.id}`, "info"));
+
+    // Also get status label values
+    const raw2 = await fetch("https://api.monday.com/v2", {
+      method:"POST",
+      headers:{"Authorization":TOKEN,"Content-Type":"application/json","API-Version":"2024-01"},
+      body: JSON.stringify({query:`query { boards(ids:[${DEL_BOARD}]) { columns { id title type settings_str } } }`})
+    });
+    const json2 = JSON.parse(await raw2.text());
+    if(json2.data && json2.data.boards[0]) {
+      log("Status/Dropdown label values:", "ok");
+      json2.data.boards[0].columns.forEach(c => {
+        if(c.type === "color" || c.type === "dropdown") {
+          try {
+            const s = JSON.parse(c.settings_str);
+            if(s.labels) {
+              const labels = Object.entries(s.labels).map(([idx,lbl]) => `"${lbl}"→${idx}`).join("  |  ");
+              log(`  "${c.title}": ${labels}`, "info");
+            } else if(s.listValues) {
+              const labels = s.listValues.map(l => `"${l.value}"→${l.id}`).join("  |  ");
+              log(`  "${c.title}": ${labels}`, "info");
+            }
+          } catch(e) { log(`  "${c.title}": could not parse settings`, "warn"); }
+        }
+      });
+    }
+  } catch(e) { log("Error: " + e.message, "err"); }
+}
+
+</script>
+</body>
+</html>
