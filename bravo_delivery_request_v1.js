@@ -232,4 +232,4 @@ function toast(msg, type = "info") {
   const t = document.createElement("div");
   t.className = `toast ${type}`;
   const ic = type === "success" ? "✓" : type === "error" ? "✕" : "ℹ";
-  t.innerHTML = `<span style="font-family:var(--mono)">${ic}</span> ${ms
+  t.innerHTML = `<span style="font-family:var(--mono)">${ic}</span> ${ms}
