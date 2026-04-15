@@ -950,18 +950,18 @@ loadStats();
 setInterval(loadStats, 60000);
 </script>
 
+<script>
 // Info button tap toggle
 document.addEventListener('click', function(e) {
   if (e.target.classList.contains('info-btn')) {
     e.stopPropagation();
     const isActive = e.target.classList.contains('active');
-    // Close all others
     document.querySelectorAll('.info-btn.active').forEach(b => b.classList.remove('active'));
     if (!isActive) e.target.classList.add('active');
   } else {
     document.querySelectorAll('.info-btn.active').forEach(b => b.classList.remove('active'));
   }
 });
-
+</script>
 </body>
 </html>
