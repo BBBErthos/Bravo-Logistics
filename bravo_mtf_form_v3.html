@@ -118,13 +118,14 @@ textarea{resize:vertical;min-height:80px}
 .sp-banner.hidden{display:none}
 .sp-btn{background:var(--blue);color:#000;font-weight:600;font-size:12px;padding:6px 14px;border-radius:4px;border:none;cursor:pointer;font-family:var(--sans);white-space:nowrap}
 
-/* ── INFO TOOLTIP ─────────────────────────────────────────────────────────── */
+
+/* ── INFO TOOLTIP (touch + hover) ──────────────────────────────────────── */
 .info-wrap{position:relative;display:inline-flex;align-items:center}
-.info-btn{width:18px;height:18px;border-radius:50%;background:var(--text3);color:#fff;font-size:10px;font-weight:700;border:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s;margin-left:6px;vertical-align:middle;line-height:1}
-.info-btn:hover{background:var(--accent)}
-.info-tip{display:none;position:absolute;bottom:130%;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;font-size:12px;font-weight:400;line-height:1.5;padding:10px 14px;border-radius:6px;white-space:normal;max-width:240px;box-shadow:0 4px 16px rgba(0,0,0,0.25);z-index:200;pointer-events:none}
-.info-tip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:6px solid transparent;border-top-color:var(--navy)}
-.info-wrap:hover .info-tip,.info-btn:focus+.info-tip{display:block}
+.info-btn{width:22px;height:22px;border-radius:50%;background:var(--text3,#6B7C8D);color:#fff;font-size:11px;font-weight:700;border:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s;margin-left:6px;vertical-align:middle;line-height:1}
+.info-btn:hover,.info-btn.active{background:var(--accent,#F5620F)}
+.info-tip{display:none;position:absolute;bottom:130%;left:50%;transform:translateX(-50%);background:#1A2B3C;color:#fff;font-size:13px;font-weight:400;line-height:1.5;padding:12px 16px;border-radius:6px;white-space:normal;max-width:260px;box-shadow:0 4px 16px rgba(0,0,0,0.3);z-index:500;pointer-events:none}
+.info-tip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:7px solid transparent;border-top-color:#1A2B3C}
+.info-wrap:hover .info-tip,.info-btn.active+.info-tip,.info-tip.show{display:block}
 </style>
 </head>
 <body>
@@ -194,7 +195,7 @@ textarea{resize:vertical;min-height:80px}
             <option>Yard B</option>
             <option>Yard C</option>
           </select>
-          <div class="fhint">Yard items are leaving from.</div>
+          <span class="info-wrap"><button class="info-btn" tabindex="0">i</button><span class="info-tip">Select the source yard — where the material is being transferred from.</span></span>
         </div>
         <div class="field">
           <label class="flabel">Destination <span class="req"></span></label>
@@ -210,7 +211,7 @@ textarea{resize:vertical;min-height:80px}
               <option>Yard A</option><option>Yard B</option><option>Yard C</option>
             </optgroup>
           </select>
-          <div class="fhint">Team or yard receiving material.</div>
+          <span class="info-wrap"><button class="info-btn" tabindex="0">i</button><span class="info-tip">Select the destination — a team number (1-10) or another yard.</span></span>
         </div>
         <div class="field">
           <label class="flabel">Team member name <span class="req"></span></label>
@@ -1111,5 +1112,19 @@ function toast(msg, type = "info") {
   }, type === "error" ? 7000 : 4000);
 }
 </script>
+
+// Info button tap toggle
+document.addEventListener('click', function(e) {
+  if (e.target.classList.contains('info-btn')) {
+    e.stopPropagation();
+    const isActive = e.target.classList.contains('active');
+    // Close all others
+    document.querySelectorAll('.info-btn.active').forEach(b => b.classList.remove('active'));
+    if (!isActive) e.target.classList.add('active');
+  } else {
+    document.querySelectorAll('.info-btn.active').forEach(b => b.classList.remove('active'));
+  }
+});
+
 </body>
 </html>

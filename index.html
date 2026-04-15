@@ -619,6 +619,14 @@ footer {
 }
 .info-wrap:hover .info-tip,
 .info-btn:focus + .info-tip { display: block; }
+
+/* ── INFO TOOLTIP (touch + hover) ──────────────────────────────────────── */
+.info-wrap{position:relative;display:inline-flex;align-items:center}
+.info-btn{width:22px;height:22px;border-radius:50%;background:var(--text3,#6B7C8D);color:#fff;font-size:11px;font-weight:700;border:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s;margin-left:6px;vertical-align:middle;line-height:1}
+.info-btn:hover,.info-btn.active{background:var(--accent,#F5620F)}
+.info-tip{display:none;position:absolute;bottom:130%;left:50%;transform:translateX(-50%);background:#1A2B3C;color:#fff;font-size:13px;font-weight:400;line-height:1.5;padding:12px 16px;border-radius:6px;white-space:normal;max-width:260px;box-shadow:0 4px 16px rgba(0,0,0,0.3);z-index:500;pointer-events:none}
+.info-tip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:7px solid transparent;border-top-color:#1A2B3C}
+.info-wrap:hover .info-tip,.info-btn.active+.info-tip,.info-tip.show{display:block}
 </style>
 </head>
 <body>
@@ -689,7 +697,7 @@ footer {
 
   <!-- Workflow strip -->
   <div class="workflow">
-    <div class="workflow-title">▸ Delivery Workflow — 5 Steps</div>
+    <div class="workflow-title">▸ Delivery Workflow — 4 Steps</div>
     <div class="workflow-steps">
       <div class="w-step">
         <div class="w-num">1</div>
@@ -712,13 +720,7 @@ footer {
       <div class="w-step">
         <div class="w-num">4</div>
         <div class="w-who">Yard Lead</div>
-        <div class="w-action">Receive material + photos</div>
-        <div class="w-status">In Progress</div>
-      </div>
-      <div class="w-step">
-        <div class="w-num">5</div>
-        <div class="w-who">Gate Marshal</div>
-        <div class="w-action">Signed BOL + PDF receipt</div>
+        <div class="w-action">Quantities + photos + signed BOL → PDF</div>
         <div class="w-status">Complete</div>
       </div>
     </div>
@@ -796,29 +798,21 @@ footer {
       <div class="role-icon marshal">🚚</div>
       <div>
         <div class="role-name marshal">Gate Marshal</div>
-        <div class="role-desc">Receives trucks at the site entrance — check-in and check-out</div>
+        <div class="role-desc">Receives trucks at the site entrance — check trucks in only. Yard Lead handles receipt and completion.</div>
       </div>
       <div class="role-badge marshal">Field</div>
     </div>
-    <div class="cards col2">
+    <div class="cards col1" style="max-width:420px">
       <a class="form-card marshal" href="bravo_checkin_v1.html">
         <div class="card-top">
           <div class="card-emoji">🟢</div>
           <div class="card-arrow">→</div>
         </div>
         <div class="card-name">Gate Check-In</div>
-        <div class="card-desc">View today's scheduled deliveries and mark drivers as On Site when they arrive at the gate.</div>
+        <div class="card-desc">View today's scheduled deliveries and mark drivers as On Site when they arrive at the gate. Yard Lead will complete the receipt and generate the PDF.</div>
         <div class="card-tag marshal">Today's Schedule</div>
       </a>
-      <a class="form-card marshal" href="bravo_checkout_v1.html">
-        <div class="card-top">
-          <div class="card-emoji">🏁</div>
-          <div class="card-arrow">→</div>
-        </div>
-        <div class="card-name">Gate Check-Out</div>
-        <div class="card-desc">Upload the signed BOL, generate the receipt PDF, and mark the delivery complete when the truck leaves.</div>
-        <div class="card-tag marshal">BOL · PDF · Complete</div>
-      </a>
+
     </div>
   </div>
 
@@ -872,23 +866,23 @@ footer {
     <div class="section-label">Live Dashboards</div>
     <div class="section-title" style="font-size:24px;margin-bottom:20px">Delivery Schedule</div>
     <div class="cards col2" style="margin-bottom:0">
-      <a class="form-card admin" href="https://erthos-cast.monday.com/overviews/36449292" target="_blank" style="background:linear-gradient(135deg,#ECEFF1,#F5F7F9)">
+      <a class="form-card admin" href="https://erthos-cast.monday.com/boards/18407062173" target="_blank" rel="noopener" style="background:linear-gradient(135deg,#ECEFF1,#F5F7F9)">
         <div class="card-top">
           <div class="card-emoji">📅</div>
-          <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--c-admin);background:#ECEFF1;padding:3px 8px;border-radius:3px">Live View</div>
+          <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--c-admin);background:#ECEFF1;padding:3px 8px;border-radius:3px">↗ Opens Full Screen</div>
         </div>
         <div class="card-name">Today's Deliveries</div>
-        <div class="card-desc">Full delivery schedule for today — all yards, all statuses. Opens in Monday.com.</div>
-        <div class="card-tag admin">Display Only · Read Only</div>
+        <div class="card-desc">Opens the Delivery Schedule board in Monday.com. Filter by today's date for a full-screen view.</div>
+        <div class="card-tag admin">Bravo · Delivery Schedule</div>
       </a>
-      <a class="form-card admin" href="https://erthos-cast.monday.com/overviews/36449292" target="_blank" style="background:linear-gradient(135deg,#ECEFF1,#F5F7F9)">
+      <a class="form-card admin" href="https://erthos-cast.monday.com/overviews/36449292" target="_blank" rel="noopener" style="background:linear-gradient(135deg,#ECEFF1,#F5F7F9)">
         <div class="card-top">
           <div class="card-emoji">📆</div>
-          <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--c-admin);background:#ECEFF1;padding:3px 8px;border-radius:3px">Planning</div>
+          <div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--c-admin);background:#ECEFF1;padding:3px 8px;border-radius:3px">↗ Opens Full Screen</div>
         </div>
         <div class="card-name">Tomorrow's Deliveries</div>
-        <div class="card-desc">Tomorrow's scheduled appointments for planning and staffing awareness.</div>
-        <div class="card-tag admin">Display Only · Read Only</div>
+        <div class="card-desc">Opens the Bravo Logistics Overview dashboard in Monday.com for planning and staffing awareness.</div>
+        <div class="card-tag admin">Bravo · Overview Dashboard</div>
       </a>
     </div>
   </div>
@@ -955,5 +949,19 @@ loadStats();
 // Refresh every 60 seconds
 setInterval(loadStats, 60000);
 </script>
+
+// Info button tap toggle
+document.addEventListener('click', function(e) {
+  if (e.target.classList.contains('info-btn')) {
+    e.stopPropagation();
+    const isActive = e.target.classList.contains('active');
+    // Close all others
+    document.querySelectorAll('.info-btn.active').forEach(b => b.classList.remove('active'));
+    if (!isActive) e.target.classList.add('active');
+  } else {
+    document.querySelectorAll('.info-btn.active').forEach(b => b.classList.remove('active'));
+  }
+});
+
 </body>
 </html>
