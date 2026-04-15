@@ -72,13 +72,13 @@ textarea{resize:vertical;min-height:80px}
 .step-txt{color:var(--text2);line-height:1.5}
 
 
-/* ── INFO TOOLTIP (touch + hover) ──────────────────────────────────────── */
-.info-wrap{position:relative;display:inline-flex;align-items:center}
-.info-btn{width:22px;height:22px;border-radius:50%;background:var(--text3,#6B7C8D);color:#fff;font-size:11px;font-weight:700;border:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s;margin-left:6px;vertical-align:middle;line-height:1}
-.info-btn:hover,.info-btn.active{background:var(--accent,#F5620F)}
-.info-tip{display:none;position:absolute;bottom:130%;left:50%;transform:translateX(-50%);background:#1A2B3C;color:#fff;font-size:13px;font-weight:400;line-height:1.5;padding:12px 16px;border-radius:6px;white-space:normal;max-width:260px;box-shadow:0 4px 16px rgba(0,0,0,0.3);z-index:500;pointer-events:none}
-.info-tip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:7px solid transparent;border-top-color:#1A2B3C}
-.info-wrap:hover .info-tip,.info-btn.active+.info-tip,.info-tip.show{display:block}
+
+/* ── INFO TOOLTIP ─────────────────────────────────────────────────────────── */
+.info-wrap{position:static;display:inline-flex;align-items:center}
+.info-btn{width:22px;height:22px;border-radius:50%;background:#90A4B4;color:#fff;font-size:11px;font-weight:700;border:2px solid #fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;margin-left:6px;vertical-align:middle;line-height:1;box-shadow:0 1px 4px rgba(0,0,0,0.15)}
+.info-btn:hover,.info-btn.active{background:#F5620F;border-color:#F5620F;box-shadow:0 2px 8px rgba(245,98,15,0.4)}
+.info-tip{display:none;position:fixed;background:#FFFFFF;color:#1A2B3C;font-size:13px;font-weight:500;line-height:1.6;padding:14px 18px;border-radius:8px;width:260px;box-shadow:0 8px 32px rgba(0,0,0,0.18),0 0 0 1.5px #E0E7EF;z-index:9999;pointer-events:none}
+.info-tip.show{display:block}
 </style>
 </head>
 <body>
@@ -177,15 +177,45 @@ textarea{resize:vertical;min-height:80px}
 <script src="bravo_delivery_request_v1.js"></script>
 
 <script>
-// Info button tap toggle
+// Info button tap/click toggle with smart positioning
 document.addEventListener('click', function(e) {
   if (e.target.classList.contains('info-btn')) {
     e.stopPropagation();
     const isActive = e.target.classList.contains('active');
-    document.querySelectorAll('.info-btn.active').forEach(b => b.classList.remove('active'));
-    if (!isActive) e.target.classList.add('active');
+    // Close all
+    document.querySelectorAll('.info-btn.active').forEach(b => {
+      b.classList.remove('active');
+      const tip = b.nextElementSibling;
+      if (tip && tip.classList.contains('info-tip')) tip.classList.remove('show');
+    });
+    if (!isActive) {
+      e.target.classList.add('active');
+      const tip = e.target.nextElementSibling;
+      if (tip && tip.classList.contains('info-tip')) {
+        tip.classList.add('show');
+        // Position tooltip near the button, avoiding edges
+        const rect = e.target.getBoundingClientRect();
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        let left = rect.left + rect.width / 2 - 130; // center on button
+        let top  = rect.top - 10; // above button, will adjust
+        // Keep within horizontal bounds
+        if (left < 12) left = 12;
+        if (left + 260 > vw - 12) left = vw - 272;
+        // If not enough space above, show below
+        if (rect.top < 120) top = rect.bottom + 10;
+        else top = rect.top - tip.offsetHeight - 10;
+        if (top < 10) top = rect.bottom + 10;
+        tip.style.left = left + 'px';
+        tip.style.top  = top  + 'px';
+      }
+    }
   } else {
-    document.querySelectorAll('.info-btn.active').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.info-btn.active').forEach(b => {
+      b.classList.remove('active');
+      const tip = b.nextElementSibling;
+      if (tip && tip.classList.contains('info-tip')) tip.classList.remove('show');
+    });
   }
 });
 </script>
