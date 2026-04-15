@@ -107,6 +107,15 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:16
 
 .form-wrap.hidden{display:none}
 .section{margin-bottom:24px}
+
+
+/* ── INFO TOOLTIP (touch + hover) ──────────────────────────────────────── */
+.info-wrap{position:relative;display:inline-flex;align-items:center}
+.info-btn{width:22px;height:22px;border-radius:50%;background:var(--text3,#6B7C8D);color:#fff;font-size:11px;font-weight:700;border:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s;margin-left:6px;vertical-align:middle;line-height:1}
+.info-btn:hover,.info-btn.active{background:var(--accent,#F5620F)}
+.info-tip{display:none;position:absolute;bottom:130%;left:50%;transform:translateX(-50%);background:#1A2B3C;color:#fff;font-size:13px;font-weight:400;line-height:1.5;padding:12px 16px;border-radius:6px;white-space:normal;max-width:260px;box-shadow:0 4px 16px rgba(0,0,0,0.3);z-index:500;pointer-events:none}
+.info-tip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:7px solid transparent;border-top-color:#1A2B3C}
+.info-wrap:hover .info-tip,.info-btn.active+.info-tip,.info-tip.show{display:block}
 </style>
 </head>
 <body>
@@ -395,9 +404,15 @@ function showSuccess(del, notes) {
 
 // ── Reset ─────────────────────────────────────────────────────────────────────
 async function reset() {
+  // Fully reset confirm panel and button before reloading
+  selectedItem = null;
+  const btn = document.getElementById("checkinBtn");
+  if (btn) { btn.disabled = false; btn.textContent = "✓ Mark Driver On Site"; }
+  document.getElementById("confirmPanel").classList.remove("vis");
+  document.getElementById("marshalNotes").value = "";
+  document.getElementById("confirmRows").innerHTML = "";
   document.getElementById("fw").classList.remove("hidden");
   document.getElementById("ss").classList.remove("vis");
-  selectedItem = null;
   await loadDeliveries();
 }
 
@@ -415,5 +430,19 @@ function toast(msg, type = "info") {
   }, type === "error" ? 7000 : 4000);
 }
 </script>
+
+// Info button tap toggle
+document.addEventListener('click', function(e) {
+  if (e.target.classList.contains('info-btn')) {
+    e.stopPropagation();
+    const isActive = e.target.classList.contains('active');
+    // Close all others
+    document.querySelectorAll('.info-btn.active').forEach(b => b.classList.remove('active'));
+    if (!isActive) e.target.classList.add('active');
+  } else {
+    document.querySelectorAll('.info-btn.active').forEach(b => b.classList.remove('active'));
+  }
+});
+
 </body>
 </html>
