@@ -503,12 +503,33 @@ async function openReceipt(del) {
   document.getElementById("queueView").style.display="none";
   document.getElementById("fw").classList.remove("hidden");
   window.scrollTo({top:0,behavior:"smooth"});
+
+  // Warn if user navigates away without submitting
+  window._receiptUnloadHandler = async function() {
+    if (selectedDel) {
+      // Best effort revert on unload (navigator.sendBeacon can't do GraphQL easily)
+      // Show warning instead
+      return "You have an unsubmitted receipt. Leaving will revert this delivery to On Site.";
+    }
+  };
+  window.addEventListener("beforeunload", window._receiptUnloadHandler);
 }
 
-function backToQueue() {
+async function backToQueue() {
+  window.removeEventListener("beforeunload", window._receiptUnloadHandler);
+  // Revert status back to On Site so the delivery re-appears in the queue
+  if (selectedDel) {
+    try {
+      await gql(
+        `mutation($b:ID!,$i:ID!,$c:String!,$v:JSON!){change_column_value(board_id:$b,item_id:$i,column_id:$c,value:$v){id}}`,
+        {b:DEL_BOARD,i:selectedDel.id,c:DEL_COL.status,v:JSON.stringify({label:"On Site"})}
+      );
+    } catch(e) { toast("Could not revert status: "+e.message,"error"); }
+  }
+  selectedDel=null;
   document.getElementById("queueView").style.display="block";
   document.getElementById("fw").classList.add("hidden");
-  selectedDel=null;
+  await loadQueue();
 }
 
 // ── Item rows ─────────────────────────────────────────────────────────────────
@@ -756,6 +777,9 @@ async function submitReceipt() {
 
   pfill.style.width="100%";
   await new Promise(r=>setTimeout(r,400));
+
+  // Clear unload handler — submission complete
+  window.removeEventListener("beforeunload", window._receiptUnloadHandler);
 
   if(submitted>0){
     document.getElementById("queueView").style.display="block";
