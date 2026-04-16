@@ -5,6 +5,19 @@
 // SETUP: When IT provides credentials, fill in the three constants below.
 // All other code is ready to go.
 //
+// FORMS USING AUTH (internal staff only):
+//   auth.js + requireAuth() in init():
+//   ✓ index.html
+//   ✓ bravo_checkin_v1.html          — Gate Marshal
+//   ✓ bravo_yard_receipt_v1.html     — Yard Lead
+//   ✓ bravo_checkout_v1.html         — Gate Marshal
+//   ✓ bravo_receipt_form_v5.html     — Admin/standalone
+//   ✓ bravo_mtf_form_v3.html         — Yard Lead
+//
+// FORMS WITHOUT AUTH (external/public):
+//   ✗ bravo_delivery_request_v1.html — Dispatcher/carrier (external)
+//   ✗ bravo_delivery_confirm_v1.html — Coordinator (email link, no login)
+//
 // Required from IT / Azure Portal:
 //   TENANT_ID  — Azure Active Directory Tenant ID
 //   CLIENT_ID  — Application (Client) ID from App Registration

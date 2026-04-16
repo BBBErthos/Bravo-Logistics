@@ -30,8 +30,6 @@ let _inited = false;
 async function init() {
   if (_inited) return;
   _inited = true;
-  const user = await requireAuth();
-  if (!user && typeof AUTH_ENABLED !== "undefined" && AUTH_ENABLED) return;
   setDateLimits();
   genId();
   await loadPOs();
