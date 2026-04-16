@@ -37,10 +37,26 @@ async function init() {
 
 function p2(n) { return String(n).padStart(2, "0"); }
 
-function genId() {
+async function genId() {
   const d = new Date();
   const s = `${d.getFullYear()}${p2(d.getMonth()+1)}${p2(d.getDate())}`;
-  document.getElementById("fid").textContent = `DEL-${s}-${String(Math.floor(Math.random()*900)+100)}`;
+  const num = await getTodayDeliveryCount(d.toISOString().split("T")[0]);
+  document.getElementById("fid").textContent = `DEL-${s}-${String(num).padStart(3,"0")}`;
+}
+
+async function getTodayDeliveryCount(dateStr) {
+  try {
+    const d = await gql(`query{boards(ids:[${DEL_BOARD}]){items_page(limit:200){items{column_values{id text}}}}}`);
+    const todayCount = d.boards[0].items_page.items.filter(item => {
+      const cv = {};
+      item.column_values.forEach(c => { cv[c.id] = c.text || ""; });
+      return cv[DEL_COL.date] === dateStr;
+    }).length;
+    return todayCount + 1;
+  } catch(e) {
+    console.warn("Could not get delivery count:", e);
+    return 1; // fallback if board query fails
+  }
 }
 
 function setDateLimits() {
@@ -139,7 +155,9 @@ async function submitRequest() {
   const email   = document.getElementById("dEmail").value.trim();
   const notes   = document.getElementById("dNotes").value.trim();
   const dateStr = date.replace(/-/g, "");
-  const ref     = `DEL-${dateStr}-${String(Math.floor(Math.random()*900)+100)}`;
+  // Get sequential number for today
+  const todayCount = await getTodayDeliveryCount(date);
+  const ref     = `DEL-${dateStr}-${String(todayCount).padStart(3,"0")}`;
 
   try {
     // Step 1: Create pending item on Delivery Schedule board
