@@ -241,6 +241,8 @@ window.addEventListener("load", init);
 let _inited = false;
 async function init() {
   if(_inited) return; _inited = true;
+  const user = await requireAuth();
+  if (!user && typeof AUTH_ENABLED !== "undefined" && AUTH_ENABLED) return;
   document.getElementById("hdate").textContent = new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});
   if(SP_ENABLED) spToken = sessionStorage.getItem("sp_access_token");
   await loadQueue();
@@ -638,5 +640,6 @@ document.addEventListener('click', function(e) {
   }
 });
 </script>
+<script src="auth.js"></script>
 </body>
 </html>

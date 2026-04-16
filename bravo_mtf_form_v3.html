@@ -290,6 +290,7 @@ textarea{resize:vertical;min-height:80px}
 
 <div class="toasts" id="toasts"></div>
 
+<script src="auth.js"></script>
 <script>
 // ── Config ────────────────────────────────────────────────────────────────────
 const TOKEN     = "eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjY0MjAyOTczNSwiYWFpIjoxMSwidWlkIjoxMDE2NTU1NDEsImlhZCI6IjIwMjYtMDQtMDZUMTY6MTU6NDEuMDAwWiIsInBlciI6Im1lOndyaXRlIiwiYWN0aWQiOjM0MDM3NTMzLCJyZ24iOiJ1c2UxIn0.xhq8Fz24KVtwvLHPuxUR4lZ6Y_WoZHvximfIa9hmnYM";
@@ -355,6 +356,8 @@ let _inited = false;
 async function init() {
   if (_inited) return;
   _inited = true;
+  const user = await requireAuth();
+  if (!user && typeof AUTH_ENABLED !== "undefined" && AUTH_ENABLED) return;
   setDate(); genId();
   initSig();
   checkSpToken();
