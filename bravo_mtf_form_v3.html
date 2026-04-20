@@ -520,8 +520,8 @@ function initSig() {
   canvas.width  = wrap.clientWidth  || 800;
   canvas.height = 180;
   const ctx = canvas.getContext("2d");
-  ctx.strokeStyle = "#e6edf3";
-  ctx.lineWidth   = 2;
+  ctx.strokeStyle = "#1a2b3c";
+  ctx.lineWidth   = 2.5;
   ctx.lineCap     = "round";
   ctx.lineJoin    = "round";
 
@@ -575,7 +575,15 @@ function clearSig() {
 }
 
 function getSigDataURL() {
-  return document.getElementById("sigCanvas").toDataURL("image/png");
+  const src = document.getElementById("sigCanvas");
+  const flat = document.createElement("canvas");
+  flat.width  = src.width;
+  flat.height = src.height;
+  const ctx = flat.getContext("2d");
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, flat.width, flat.height);
+  ctx.drawImage(src, 0, 0);
+  return flat.toDataURL("image/png");
 }
 
 // ── SharePoint / Microsoft Graph auth ────────────────────────────────────────
