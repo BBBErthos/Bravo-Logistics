@@ -469,7 +469,30 @@ async function loadMM() {
 async function openReceipt(del) {
   selectedDel = del;
 
-  // Immediately set to In Progress
+  // Check current status before proceeding — prevent double-open
+  try {
+    const check = await gql(`query{boards(ids:[${DEL_BOARD}]){items_page(limit:10){items{id column_values{id text}}}}}`);
+    // Re-fetch this specific item's status
+    const all = check.boards[0].items_page.items;
+    // Use items_page filtered approach — find by name match
+    const fresh = await gql(`query{boards(ids:[${DEL_BOARD}]){items_page(limit:200){items{id name column_values{id text}}}}}`);
+    const match = fresh.boards[0].items_page.items.find(i => i.id === del.id);
+    if (match) {
+      const cv = {}; match.column_values.forEach(c => { cv[c.id] = c.text || ""; });
+      const currentStatus = cv[DEL_COL.status];
+      if (currentStatus === "Complete") {
+        toast("This delivery is already marked Complete.", "error");
+        await loadQueue();
+        return;
+      }
+      if (currentStatus === "In Progress") {
+        showInProgressWarning(del);
+        return;
+      }
+    }
+  } catch(e) { console.warn("Status check failed:", e); }
+
+  // Set to In Progress
   try {
     await gql(
       `mutation($b:ID!,$i:ID!,$c:String!,$v:JSON!){change_column_value(board_id:$b,item_id:$i,column_id:$c,value:$v){id}}`,
@@ -629,9 +652,39 @@ async function submitReceipt() {
   const btn=document.getElementById("subBtn");
   if(!selectedDel){toast("No delivery selected","error");return;}
 
+  // Block if delivery already Complete
+  try {
+    const check = await gql(`query{boards(ids:[${DEL_BOARD}]){items_page(limit:200){items{id name column_values{id text}}}}}`);
+    const match = check.boards[0].items_page.items.find(i => i.id === selectedDel.id);
+    if (match) {
+      const cv = {}; match.column_values.forEach(c => { cv[c.id] = c.text || ""; });
+      if (cv[DEL_COL.status] === "Complete") {
+        toast("This delivery has already been completed — receipt exists.", "error");
+        btn.disabled = false;
+        return;
+      }
+    }
+  } catch(e) { console.warn("Completion check failed:", e); }
+
   const hasDmg = document.getElementById("dmgToggle").checked;
   const dmgN   = document.getElementById("dmgNotes").value.trim();
   if(hasDmg&&!dmgN){toast("Please describe the damage observed","error");return;}
+
+  // Check for duplicate BOL on Receipts board
+  if (selectedDel.bol && !window._receiptBolConfirmed) {
+    try {
+      const bolCheck = await gql(`query{boards(ids:[${REC_BOARD}]){items_page(limit:200){items{column_values{id text}}}}}`);
+      const bolMatches = bolCheck.boards[0].items_page.items.filter(item => {
+        const cv = {}; item.column_values.forEach(c => { cv[c.id] = c.text || ""; });
+        return cv[REC_COL.bol] === selectedDel.bol;
+      });
+      if (bolMatches.length > 0) {
+        showReceiptBolWarning(selectedDel.bol, bolMatches.length);
+        return;
+      }
+    } catch(e) { console.warn("BOL receipt check failed:", e); }
+  }
+  window._receiptBolConfirmed = false;
 
   // Collect quantities
   const toSubmit=[];
@@ -680,7 +733,9 @@ async function submitReceipt() {
   } catch(e) { console.warn("Could not count today's receipts for PO:", e); }
 
   const suffix  = receiptNum > 1 ? `-${String(receiptNum).padStart(2,"0")}` : "";
-  const baseRef = `${delName}_${poSlug}${suffix}${hasDmg?"-DAMAGE":""}`;
+  const bolSuffix = window._receiptBolQualifier || '';
+  window._receiptBolQualifier = '';
+  const baseRef = `${delName}_${poSlug}${suffix}${bolSuffix}${hasDmg?"-DAMAGE":""}`;
   const groupId = YARD_GROUPS[yard]||null;
   const spFolder= `${SP_BASE_FOLDER}/${baseRef}`;
 
@@ -934,6 +989,89 @@ async function generatePDF(formData, items, photoMap, fileNames, spBaseUrl, pdfF
   doc.text("Erthos  |  Industrial Bravo Project LLC  |  Project 1159-Bravo",margin,291);
   doc.text(`Generated ${new Date().toLocaleString()}`,W-margin,291,{align:"right"});
   return doc;
+}
+
+// ── Duplicate prevention helpers ─────────────────────────────────────────────
+function showInProgressWarning(del) {
+  if (!document.getElementById("inProgressWarn")) {
+    const overlay = document.createElement("div");
+    overlay.id = "inProgressWarn";
+    overlay.style.cssText = "display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2000;align-items:center;justify-content:center";
+    overlay.innerHTML = `
+      <div style="background:#fff;border-radius:8px;padding:28px;max-width:400px;width:90%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.3)">
+        <div style="font-size:32px;margin-bottom:12px">⚠️</div>
+        <h3 style="font-size:16px;font-weight:700;color:#1A2B3C;margin-bottom:10px">Delivery already in progress</h3>
+        <p style="font-size:14px;color:#374A5C;margin-bottom:20px">This delivery is already marked <strong>In Progress</strong> — another Yard Lead may have already opened it. Opening it again may create duplicate receipt entries.</p>
+        <div style="display:flex;gap:10px">
+          <button onclick="document.getElementById('inProgressWarn').style.display='none'" style="flex:1;padding:12px;border-radius:6px;border:2px solid #B0BAC5;background:#E8ECF0;color:#374A5C;font-size:14px;font-weight:600;cursor:pointer">Go back</button>
+          <button onclick="forceOpenReceipt()" style="flex:1;padding:12px;border-radius:6px;border:none;background:#1565C0;color:#fff;font-size:14px;font-weight:600;cursor:pointer">Open anyway</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+  }
+  document.getElementById("inProgressWarn").style.display = "flex";
+  document.getElementById("inProgressWarn")._del = del;
+}
+
+async function forceOpenReceipt() {
+  document.getElementById("inProgressWarn").style.display = "none";
+  const del = document.getElementById("inProgressWarn")._del;
+  if (!del) return;
+  // Skip status check and proceed directly
+  selectedDel = del;
+  // Populate info and show form (copy from openReceipt without status check)
+  document.getElementById("infoGrid").innerHTML=`
+    <div class="info-row"><div class="info-label">Reference</div><div class="info-value">${del.name}</div></div>
+    <div class="info-row"><div class="info-label">Time Slot</div><div class="info-value">${del.timeSlot||"—"}</div></div>
+    <div class="info-row"><div class="info-label">Yard</div><div class="info-value">${del.yard||"—"}</div></div>
+    <div class="info-row"><div class="info-label">PO Number</div><div class="info-value">${del.po||"—"}</div></div>
+    <div class="info-row"><div class="info-label">Carrier</div><div class="info-value">${del.carrier||"—"}</div></div>
+    <div class="info-row"><div class="info-label">BOL #</div><div class="info-value">${del.bol||"—"}</div></div>`;
+  poItems = mmItems.filter(i=>i.poNumber===del.po);
+  renderItemRows();
+  photos={packing:[],cargo:[],damage:[],bol:[]};
+  ["packing","cargo","damage","bol"].forEach(c=>renderGrid(c));
+  document.getElementById("dmgToggle").checked=false;
+  document.getElementById("dmgSection").style.display="none";
+  document.getElementById("dmgNotes").value="";
+  document.getElementById("rNotes").value="";
+  document.getElementById("subBtn").disabled=false;
+  document.getElementById("subBtn").textContent="✓ Submit Receipt";
+  document.getElementById("prog").classList.remove("vis");
+  document.getElementById("queueView").style.display="none";
+  document.getElementById("fw").classList.remove("hidden");
+  window.scrollTo({top:0,behavior:"smooth"});
+  window.addEventListener("beforeunload", window._receiptUnloadHandler);
+}
+
+function showReceiptBolWarning(bol, count) {
+  if (!document.getElementById("receiptBolWarn")) {
+    const overlay = document.createElement("div");
+    overlay.id = "receiptBolWarn";
+    overlay.style.cssText = "display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2000;align-items:center;justify-content:center";
+    overlay.innerHTML = `
+      <div style="background:#fff;border-radius:8px;padding:28px;max-width:400px;width:90%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.3)">
+        <div style="font-size:32px;margin-bottom:12px">⚠️</div>
+        <h3 style="font-size:16px;font-weight:700;color:#1A2B3C;margin-bottom:10px">Duplicate BOL detected</h3>
+        <p style="font-size:14px;color:#374A5C;margin-bottom:6px">BOL <strong id="rBolWarnNum"></strong> has already been received <span id="rBolWarnCount"></span> on the Receipts board.</p>
+        <p style="font-size:13px;color:#6B7C8D;margin-bottom:20px">If this is a separate delivery on the same BOL, proceed and a <strong>-01</strong> qualifier will be added to the receipt reference.</p>
+        <div style="display:flex;gap:10px">
+          <button onclick="document.getElementById('receiptBolWarn').style.display='none'" style="flex:1;padding:12px;border-radius:6px;border:2px solid #B0BAC5;background:#E8ECF0;color:#374A5C;font-size:14px;font-weight:600;cursor:pointer">Go back</button>
+          <button onclick="confirmReceiptBol()" style="flex:1;padding:12px;border-radius:6px;border:none;background:#B45000;color:#fff;font-size:14px;font-weight:600;cursor:pointer">Continue with -01</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+  }
+  document.getElementById("rBolWarnNum").textContent   = bol;
+  document.getElementById("rBolWarnCount").textContent = count === 1 ? "once" : `${count} times`;
+  document.getElementById("receiptBolWarn").style.display = "flex";
+}
+
+function confirmReceiptBol() {
+  document.getElementById("receiptBolWarn").style.display = "none";
+  window._receiptBolConfirmed = true;
+  window._receiptBolQualifier = "-01";
+  submitReceipt();
 }
 
 // ── SP helpers ────────────────────────────────────────────────────────────────
