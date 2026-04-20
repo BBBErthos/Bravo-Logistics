@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Bravo Logistics — Analytics Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --navy:    #1A2B3C;
+    --navy2:   #243444;
+    --navy3:   #2E3F52;
+    --accent:  #F5620F;
+    --blue:    #1E5AA0;
+    --green:   #1A8C46;
+    --amber:   #B45000;
+    --red:     #B41E1E;
+    --text1:   #E8ECF0;
+    --text2:   #90A4B4;
+    --text3:   #5A7080;
+    --border:  rgba(255,255,255,0.08);
+    --surface: rgba(255,255,255,0.04);
+    --card:    rgba(255,255,255,0.06);
+    --mono:    'IBM Plex Mono', 'Courier New', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--navy);
+    color: var(--text1);
+    font-family: 'Barlow', 'IBM Plex Sans', system-ui, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Header ── */
+  .header {
+    background: linear-gradient(135deg, #0F1C28 0%, #1A2B3C 60%, #1E3348 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 0 28px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-left { display: flex; align-items: center; gap: 16px; }
+  .logo-diamond {
+    width: 36px; height: 36px;
+    background: var(--accent);
+    clip-path: polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .header-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--text2);
+  }
+  .header-title strong { color: var(--text1); font-size: 13px; display: block; letter-spacing: .06em; }
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  .last-updated {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text3);
+    letter-spacing: .06em;
+  }
+  .refresh-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .refresh-btn:disabled { opacity: .4; cursor: not-allowed; }
+  .home-link {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text2);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all .15s;
+  }
+  .home-link:hover { border-color: var(--text2); color: var(--text1); }
+
+  /* ── Loading overlay ── */
+  #loadingOverlay {
+    position: fixed; inset: 0;
+    background: rgba(15,28,40,.92);
+    z-index: 500;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+  }
+  #loadingOverlay.hidden { display: none; }
+  .spinner {
+    width: 44px; height: 44px;
+    border: 3px solid rgba(245,98,15,.2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .load-text {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text2);
+    letter-spacing: .1em;
+    text-transform: uppercase;
+  }
+  .load-sub {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text3);
+    letter-spacing: .06em;
+  }
+
+  /* ── Error banner ── */
+  #errorBanner {
+    background: rgba(180,30,30,.15);
+    border: 1px solid rgba(180,30,30,.4);
+    color: #ff9090;
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 12px 20px;
+    margin: 16px 28px 0;
+    border-radius: 6px;
+    display: none;
+  }
+
+  /* ── Main layout ── */
+  .main { padding: 28px; max-width: 1600px; margin: 0 auto; }
+
+  /* ── Section headers ── */
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .section-sub {
+    font-size: 12px;
+    color: var(--text3);
+  }
+  .section { margin-bottom: 48px; }
+
+  /* ── Stat cards row ── */
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--accent);
+    opacity: .6;
+  }
+  .stat-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 8px;
+  }
+  .stat-value {
+    font-family: var(--mono);
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text1);
+    line-height: 1;
+  }
+  .stat-pct {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: 4px;
+  }
+
+  /* ── Chart grid ── */
+  .chart-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  .chart-grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 1100px) {
+    .chart-grid-2 { grid-template-columns: 1fr; }
+    .chart-grid-3 { grid-template-columns: 1fr; }
+  }
+
+  .chart-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .chart-card-header {
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .chart-card-title {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--text2);
+  }
+  .chart-card-sub {
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: 2px;
+  }
+  .chart-card-body { padding: 20px; position: relative; }
+
+  /* ── Progress bars (critical items) ── */
+  .item-row {
+    display: grid;
+    grid-template-columns: 110px 1fr 80px;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .item-row:last-child { border-bottom: none; }
+  .item-num {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--blue);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .bar-stack {
+    height: 14px;
+    background: rgba(255,255,255,.06);
+    border-radius: 3px;
+    overflow: hidden;
+    display: flex;
+  }
+  .bar-received  { background: #1A8C46; transition: width .6s ease; }
+  .bar-issued    { background: #1E5AA0; transition: width .6s ease; }
+  .bar-remaining { background: rgba(255,255,255,.08); flex: 1; }
+  .item-pcts {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text3);
+    text-align: right;
+    line-height: 1.6;
+  }
+
+  /* ── Toggle buttons ── */
+  .toggle-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+  .toggle-btn {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    padding: 5px 12px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--text3);
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .toggle-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  /* ── Legend ── */
+  .legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text2);
+  }
+  .legend-dot {
+    width: 10px; height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  /* ── Date picker ── */
+  .date-filter {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .date-filter label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text3);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+  .date-filter input {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text1);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 4px;
+  }
+
+  /* ── Toast ── */
+  #toasts { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 8px; z-index: 999; }
+  .toast {
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 10px 16px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 340px;
+    animation: slideIn .2s ease;
+  }
+  @keyframes slideIn { from { opacity:0; transform:translateX(20px); } }
+  .toast.success { background: rgba(26,140,70,.9); color: #fff; }
+  .toast.error   { background: rgba(180,30,30,.9);  color: #fff; }
+  .toast.info    { background: rgba(36,52,66,.95);  color: var(--text1); border: 1px solid var(--border); }
+
+  .no-data {
+    text-align: center;
+    padding: 40px 20px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text3);
+    letter-spacing: .06em;
+  }
+</style>
+</head>
+<body>
+
+<!-- Loading overlay -->
+<div id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="load-text">Loading Dashboard</div>
+  <div class="load-sub" id="loadSub">Connecting to Monday.com...</div>
+</div>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-left">
+    <div class="logo-diamond"></div>
+    <div class="header-title">
+      <strong>Bravo Analytics</strong>
+      Project 1159-Bravo · Erthos
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="last-updated" id="lastUpdated">—</span>
+    <button class="refresh-btn" id="refreshBtn" onclick="loadAll()">↻ Refresh</button>
+    <a class="home-link" href="index.html">⌂ Home</a>
+  </div>
+</div>
+
+<div id="errorBanner"></div>
+
+<div class="main">
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <!-- SECTION 1 — Critical Items Progress                   -->
+  <!-- ══════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-title">Critical Items — Inventory Progress</span>
+      <span class="section-sub">Received vs. Issued vs. Remaining · relative to PO Quantity</span>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#1A8C46"></div>Received (on-hand)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#1E5AA0"></div>Issued to Teams</div>
+      <div class="legend-item"><div class="legend-dot" style="background:rgba(255,255,255,.1)"></div>Remaining to Receive</div>
+    </div>
+
+    <div class="chart-grid-2">
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div>
+            <div class="chart-card-title">Progress by Item</div>
+            <div class="chart-card-sub">Stack bars = % of PO Qty</div>
+          </div>
+        </div>
+        <div class="chart-card-body">
+          <div id="criticalBars"><div class="no-data">Loading...</div></div>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div>
+            <div class="chart-card-title">% Received vs. % Issued</div>
+            <div class="chart-card-sub">Grouped bar chart · all critical items</div>
+          </div>
+        </div>
+        <div class="chart-card-body" style="height:340px">
+          <canvas id="criticalChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <!-- SECTION 2 — Team Issuance                             -->
+  <!-- ══════════════════════════════════════════════════════ -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-title">Material Issuance by Team</span>
+      <span class="section-sub">All items · only teams with actual receipts appear</span>
+    </div>
+
+    <div class="toggle-row">
+      <button class="toggle-btn active" id="btnCumulative" onclick="setTeamView('cumulative')">Cumulative Total</button>
+      <button class="toggle-btn" id="btnDaily" onclick="setTeamView('daily')">Daily</button>
+    </div>
+
+    <div id="dailyDateRow" style="display:none;margin-bottom:16px">
+      <div class="date-filter">
+        <label>Date</label>
+        <input type="date" id="teamDate" onchange="renderTeamCharts()"/>
+      </div>
+    </div>
+
+    <div class="chart-grid-2">
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div>
+            <div class="chart-card-title">All Items — Total Issued per Team</div>
+            <div class="chart-card-sub" id="teamChartSub">Cumulative project total</div>
+          </div>
+        </div>
+        <div class="chart-card-body" style="height:340px">
+          <canvas id="teamTotalChart"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div>
+            <div class="chart-card-title">ITM0002226 — Issued per Team</div>
+            <div class="chart-card-sub" id="itm26ChartSub">Cumulative project total</div>
+          </div>
+        </div>
+        <div class="chart-card-body" style="height:340px">
+          <canvas id="itm26Chart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Per-item breakdown table -->
+    <div class="chart-card" style="margin-top:20px">
+      <div class="chart-card-header">
+        <div>
+          <div class="chart-card-title">Item Breakdown by Team</div>
+          <div class="chart-card-sub">Quantity issued — cumulative totals</div>
+        </div>
+      </div>
+      <div class="chart-card-body" style="overflow-x:auto">
+        <div id="teamBreakdownTable"><div class="no-data">Loading...</div></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<div id="toasts"></div>
+
+<script>
+// ── Config ────────────────────────────────────────────────────────────────────
+const TOKEN    = "eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjY0MjAyOTczNSwiYWFpIjoxMSwidWlkIjoxMDE2NTU1NDEsImlhZCI6IjIwMjYtMDQtMDZUMTY6MTU6NDEuMDAwWiIsInBlciI6Im1lOndyaXRlIiwiYWN0aWQiOjM0MDM3NTMzLCJyZ24iOiJ1c2UxIn0.xhq8Fz24KVtwvLHPuxUR4lZ6Y_WoZHvximfIa9hmnYM";
+const MM_BOARD  = "18407396726";
+const MTF_BOARD = "18407069511";
+
+const CRITICAL_ITEMS = [
+  "ITM0002226","ITM0002285","ITM0002197",
+  "ITM0001673","ITM0001674","ITM0001675",
+  "ITM0001676","ITM0001677","ITM0001678"
+];
+
+// MM column IDs (from brief)
+const MM_COL = {
+  itemNumber: "text_mm25tw3r",
+  poQty:      "numeric_mm25kp3n",
+  yardAQty:   "numeric_mm28esrx",
+  yardBQty:   "numeric_mm28rzz8",
+  yardCQty:   "numeric_mm28v4wf"
+};
+
+// MTF column IDs (from brief)
+const MTF_COL = {
+  date:     "date_mm21h2yd",
+  qty:      "numeric_mm212h6p",
+  team:     "text_mm21h40n",
+  type:     "color_mm2171m1",
+  yard:     "color_mm218rh2",
+  item:     "text_mm28jp3"
+};
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let mmData    = [];   // [{itemNumber, poQty, onHandQty, ...}]
+let mtfData   = [];   // [{date, qty, team, type, item}]
+let teamView  = "cumulative";
+let chartInstances = {};
+
+// ── GQL ───────────────────────────────────────────────────────────────────────
+async function gql(query) {
+  const r = await fetch("https://api.monday.com/v2", {
+    method: "POST",
+    headers: {
+      "Authorization": TOKEN,
+      "Content-Type":  "application/json",
+      "API-Version":   "2024-01"
+    },
+    body: JSON.stringify({ query })
+  });
+  const d = await r.json();
+  if (d.errors) throw new Error(d.errors[0].message);
+  return d.data;
+}
+
+// ── Load all data ─────────────────────────────────────────────────────────────
+async function loadAll() {
+  const btn = document.getElementById("refreshBtn");
+  btn.disabled = true; btn.textContent = "Loading...";
+  document.getElementById("loadingOverlay").classList.remove("hidden");
+  document.getElementById("errorBanner").style.display = "none";
+
+  try {
+    setLoadSub("Fetching Material Master...");
+    await loadMM();
+
+    setLoadSub("Fetching Transfer records...");
+    await loadMTF();
+
+    setLoadSub("Building charts...");
+    renderCriticalBars();
+    renderCriticalChart();
+    renderTeamCharts();
+    renderTeamTable();
+
+    document.getElementById("lastUpdated").textContent =
+      "Updated " + new Date().toLocaleTimeString();
+    toast("Dashboard refreshed ✓", "success");
+  } catch(e) {
+    const banner = document.getElementById("errorBanner");
+    banner.textContent = "Error loading data: " + e.message;
+    banner.style.display = "block";
+    toast("Load failed: " + e.message, "error");
+    console.error(e);
+  }
+
+  document.getElementById("loadingOverlay").classList.add("hidden");
+  btn.disabled = false; btn.textContent = "↻ Refresh";
+}
+
+function setLoadSub(msg) {
+  document.getElementById("loadSub").textContent = msg;
+}
+
+// ── Fetch Material Master ─────────────────────────────────────────────────────
+async function loadMM() {
+  let cursor = null, all = [], page = 0;
+  do {
+    page++;
+    const q = cursor
+      ? `{ boards(ids:[${MM_BOARD}]) { items_page(limit:200,cursor:"${cursor}") { cursor items { id name column_values { id text } } } } }`
+      : `{ boards(ids:[${MM_BOARD}]) { items_page(limit:200) { cursor items { id name column_values { id text } } } } }`;
+    const d = await gql(q);
+    const pg = d.boards[0].items_page;
+    cursor = pg.cursor;
+    pg.items.forEach(item => {
+      const cv = {};
+      item.column_values.forEach(c => { cv[c.id] = c.text || ""; });
+      const itemNum = cv[MM_COL.itemNumber] || item.name;
+      const poQty   = parseFloat(cv[MM_COL.poQty] || "0") || 0;
+      const yardA   = parseFloat(cv[MM_COL.yardAQty] || "0") || 0;
+      const yardB   = parseFloat(cv[MM_COL.yardBQty] || "0") || 0;
+      const yardC   = parseFloat(cv[MM_COL.yardCQty] || "0") || 0;
+      all.push({
+        id:         item.id,
+        name:       item.name,
+        itemNumber: itemNum,
+        poQty,
+        onHandQty:  yardA + yardB + yardC,
+        yardA, yardB, yardC
+      });
+    });
+  } while (cursor && page < 20);
+  mmData = all;
+}
+
+// ── Fetch MTF ─────────────────────────────────────────────────────────────────
+async function loadMTF() {
+  let cursor = null, all = [], page = 0;
+  do {
+    page++;
+    const q = cursor
+      ? `{ boards(ids:[${MTF_BOARD}]) { items_page(limit:500,cursor:"${cursor}") { cursor items { id name column_values { id text } } } } }`
+      : `{ boards(ids:[${MTF_BOARD}]) { items_page(limit:500) { cursor items { id name column_values { id text } } } } }`;
+    const d = await gql(q);
+    const pg = d.boards[0].items_page;
+    cursor = pg.cursor;
+    pg.items.forEach(item => {
+      const cv = {};
+      item.column_values.forEach(c => { cv[c.id] = c.text || ""; });
+      all.push({
+        date:   cv[MTF_COL.date]   || "",
+        qty:    parseFloat(cv[MTF_COL.qty] || "0") || 0,
+        team:   cv[MTF_COL.team]   || "",
+        type:   cv[MTF_COL.type]   || "",
+        item:   cv[MTF_COL.item]   || "",
+        yard:   cv[MTF_COL.yard]   || ""
+      });
+    });
+  } while (cursor && page < 20);
+  // Only issuances
+  mtfData = all.filter(r => r.type && r.type.toLowerCase().includes("issuance") && r.team);
+}
+
+// ── Critical Items — Progress Bars ────────────────────────────────────────────
+function renderCriticalBars() {
+  const container = document.getElementById("criticalBars");
+  container.innerHTML = "";
+
+  // Build issued map from MTF
+  const issuedByItem = {};
+  mtfData.forEach(r => {
+    const key = r.item.trim().toUpperCase();
+    issuedByItem[key] = (issuedByItem[key] || 0) + r.qty;
+  });
+
+  const found = CRITICAL_ITEMS.map(ci => {
+    // Try to match by item number column or by name
+    const mm = mmData.find(m =>
+      m.itemNumber.trim().toUpperCase() === ci.toUpperCase() ||
+      m.name.trim().toUpperCase() === ci.toUpperCase()
+    );
+    const issuedKey = Object.keys(issuedByItem).find(k => k === ci.toUpperCase()) || ci.toUpperCase();
+    return {
+      itemNumber: ci,
+      poQty:      mm ? mm.poQty      : 0,
+      onHandQty:  mm ? mm.onHandQty  : 0,
+      issuedQty:  issuedByItem[issuedKey] || 0,
+      found:      !!mm
+    };
+  });
+
+  if (!found.some(f => f.found)) {
+    container.innerHTML = `<div class="no-data">No matching items found in Material Master.<br>Check item number format.</div>`;
+    return;
+  }
+
+  found.forEach(item => {
+    const pctReceived = item.poQty > 0 ? Math.min((item.onHandQty / item.poQty) * 100, 100) : 0;
+    const pctIssued   = item.poQty > 0 ? Math.min((item.issuedQty  / item.poQty) * 100, 100) : 0;
+
+    const row = document.createElement("div");
+    row.className = "item-row";
+    row.innerHTML = `
+      <div class="item-num" title="${item.itemNumber}">${item.itemNumber}</div>
+      <div>
+        <div class="bar-stack">
+          <div class="bar-received"  style="width:${pctReceived}%"></div>
+          <div class="bar-issued"    style="width:${pctIssued}%"></div>
+          <div class="bar-remaining"></div>
+        </div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text3);margin-top:3px">
+          PO: ${item.poQty.toLocaleString()} · On Hand: ${item.onHandQty.toLocaleString()} · Issued: ${item.issuedQty.toLocaleString()}
+        </div>
+      </div>
+      <div class="item-pcts">
+        <div style="color:#1A8C46">${pctReceived.toFixed(0)}% rcvd</div>
+        <div style="color:#1E5AA0">${pctIssued.toFixed(0)}% iss</div>
+      </div>`;
+    container.appendChild(row);
+  });
+}
+
+// ── Critical Items — Grouped Bar Chart ────────────────────────────────────────
+function renderCriticalChart() {
+  const issuedByItem = {};
+  mtfData.forEach(r => {
+    const key = r.item.trim().toUpperCase();
+    issuedByItem[key] = (issuedByItem[key] || 0) + r.qty;
+  });
+
+  const labels    = [];
+  const received  = [];
+  const issued    = [];
+  const remaining = [];
+
+  CRITICAL_ITEMS.forEach(ci => {
+    const mm = mmData.find(m =>
+      m.itemNumber.trim().toUpperCase() === ci.toUpperCase() ||
+      m.name.trim().toUpperCase() === ci.toUpperCase()
+    );
+    const issuedKey = Object.keys(issuedByItem).find(k => k === ci.toUpperCase()) || ci.toUpperCase();
+    const poQty    = mm ? mm.poQty     : 0;
+    const onHand   = mm ? mm.onHandQty : 0;
+    const iss      = issuedByItem[issuedKey] || 0;
+    const pctRcvd  = poQty > 0 ? Math.min((onHand / poQty) * 100, 100) : 0;
+    const pctIss   = poQty > 0 ? Math.min((iss    / poQty) * 100, 100) : 0;
+    const pctRem   = Math.max(100 - pctRcvd, 0);
+
+    // Shorten label
+    labels.push(ci.replace("ITM","").replace("ITTM",""));
+    received.push(parseFloat(pctRcvd.toFixed(1)));
+    issued.push(parseFloat(pctIss.toFixed(1)));
+    remaining.push(parseFloat(pctRem.toFixed(1)));
+  });
+
+  destroyChart("criticalChart");
+  const ctx = document.getElementById("criticalChart").getContext("2d");
+  chartInstances["criticalChart"] = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [
+        { label: "% Received",  data: received,  backgroundColor: "#1A8C46", borderRadius: 3 },
+        { label: "% Issued",    data: issued,    backgroundColor: "#1E5AA0", borderRadius: 3 },
+        { label: "% Remaining", data: remaining, backgroundColor: "rgba(255,255,255,.1)", borderRadius: 3 }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: "#90A4B4", font: { family: "'IBM Plex Mono', monospace", size: 10 }, boxWidth: 12 } },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y}%`
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: "#90A4B4", font: { family: "'IBM Plex Mono', monospace", size: 9 } }, grid: { color: "rgba(255,255,255,.04)" } },
+        y: {
+          min: 0, max: 100,
+          ticks: { color: "#90A4B4", font: { family: "'IBM Plex Mono', monospace", size: 9 }, callback: v => v + "%" },
+          grid: { color: "rgba(255,255,255,.06)" }
+        }
+      }
+    }
+  });
+}
+
+// ── Team View Toggle ──────────────────────────────────────────────────────────
+function setTeamView(view) {
+  teamView = view;
+  document.getElementById("btnCumulative").classList.toggle("active", view === "cumulative");
+  document.getElementById("btnDaily").classList.toggle("active", view === "daily");
+  document.getElementById("dailyDateRow").style.display = view === "daily" ? "block" : "none";
+  renderTeamCharts();
+}
+
+// ── Team Charts ───────────────────────────────────────────────────────────────
+function renderTeamCharts() {
+  const dateFilter = teamView === "daily" ? document.getElementById("teamDate").value : null;
+  const sub = dateFilter ? `Date: ${dateFilter}` : "Cumulative project total";
+  document.getElementById("teamChartSub").textContent = sub;
+  document.getElementById("itm26ChartSub").textContent = sub;
+
+  // Filter MTF data
+  const filtered = dateFilter
+    ? mtfData.filter(r => r.date === dateFilter)
+    : mtfData;
+
+  // Get all teams that have records
+  const teams = [...new Set(filtered.map(r => r.team).filter(Boolean))].sort((a,b) => {
+    // Sort numerically where possible (Team 1, Team 2...)
+    const na = parseInt(a.replace(/\D/g,"")) || 0;
+    const nb = parseInt(b.replace(/\D/g,"")) || 0;
+    return na !== nb ? na - nb : a.localeCompare(b);
+  });
+
+  if (!teams.length) {
+    ["teamTotalChart","itm26Chart"].forEach(id => {
+      destroyChart(id);
+      const ctx = document.getElementById(id).getContext("2d");
+      ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
+    });
+    return;
+  }
+
+  // Total issued per team (all items)
+  const totalByTeam = teams.map(team =>
+    filtered.filter(r => r.team === team).reduce((s,r) => s + r.qty, 0)
+  );
+
+  // ITM0002226 per team
+  const itm26ByTeam = teams.map(team =>
+    filtered.filter(r => r.team === team && r.item.trim().toUpperCase() === "ITM0002226")
+             .reduce((s,r) => s + r.qty, 0)
+  );
+
+  const COLORS = [
+    "#F5620F","#1A8C46","#1E5AA0","#B45000","#6B3FA0",
+    "#1A8C80","#B4A000","#803020","#207850","#5080B4"
+  ];
+
+  // Team Total Chart
+  destroyChart("teamTotalChart");
+  const ctx1 = document.getElementById("teamTotalChart").getContext("2d");
+  chartInstances["teamTotalChart"] = new Chart(ctx1, {
+    type: "bar",
+    data: {
+      labels: teams,
+      datasets: [{
+        label: "Total Qty Issued",
+        data: totalByTeam,
+        backgroundColor: teams.map((_,i) => COLORS[i % COLORS.length]),
+        borderRadius: 4
+      }]
+    },
+    options: barOptions("Units Issued")
+  });
+
+  // ITM0002226 Chart
+  destroyChart("itm26Chart");
+  const ctx2 = document.getElementById("itm26Chart").getContext("2d");
+  chartInstances["itm26Chart"] = new Chart(ctx2, {
+    type: "bar",
+    data: {
+      labels: teams,
+      datasets: [{
+        label: "ITM0002226 Issued",
+        data: itm26ByTeam,
+        backgroundColor: teams.map((_,i) => COLORS[i % COLORS.length]),
+        borderRadius: 4
+      }]
+    },
+    options: barOptions("Units Issued")
+  });
+}
+
+function barOptions(yLabel) {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.parsed.y.toLocaleString()} units` } }
+    },
+    scales: {
+      x: {
+        ticks: { color: "#90A4B4", font: { family: "'IBM Plex Mono', monospace", size: 9 } },
+        grid: { color: "rgba(255,255,255,.04)" }
+      },
+      y: {
+        beginAtZero: true,
+        ticks: { color: "#90A4B4", font: { family: "'IBM Plex Mono', monospace", size: 9 }, callback: v => v.toLocaleString() },
+        grid: { color: "rgba(255,255,255,.06)" },
+        title: { display: false }
+      }
+    }
+  };
+}
+
+// ── Team Breakdown Table ──────────────────────────────────────────────────────
+function renderTeamTable() {
+  const container = document.getElementById("teamBreakdownTable");
+
+  // Get all teams and items that appear in MTF
+  const teams = [...new Set(mtfData.map(r => r.team).filter(Boolean))].sort((a,b) => {
+    const na = parseInt(a.replace(/\D/g,"")) || 0;
+    const nb = parseInt(b.replace(/\D/g,"")) || 0;
+    return na !== nb ? na - nb : a.localeCompare(b);
+  });
+
+  const items = [...new Set(mtfData.map(r => r.item.trim()).filter(Boolean))].sort();
+
+  if (!teams.length || !items.length) {
+    container.innerHTML = `<div class="no-data">No issuance records found.</div>`;
+    return;
+  }
+
+  // Build pivot: item → team → qty
+  const pivot = {};
+  items.forEach(item => {
+    pivot[item] = {};
+    teams.forEach(team => {
+      pivot[item][team] = mtfData
+        .filter(r => r.item.trim() === item && r.team === team)
+        .reduce((s,r) => s + r.qty, 0);
+    });
+  });
+
+  // Table
+  const colW = Math.max(70, Math.floor(600 / teams.length));
+  let html = `<table style="width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11px">`;
+
+  // Header
+  html += `<thead><tr>
+    <th style="text-align:left;padding:8px 12px;color:var(--text3);border-bottom:1px solid var(--border);font-size:9px;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap">Item #</th>`;
+  teams.forEach(t => {
+    html += `<th style="text-align:right;padding:8px 8px;color:var(--text3);border-bottom:1px solid var(--border);font-size:9px;letter-spacing:.08em;text-transform:uppercase;width:${colW}px;white-space:nowrap">${t}</th>`;
+  });
+  html += `<th style="text-align:right;padding:8px 12px;color:var(--accent);border-bottom:1px solid var(--border);font-size:9px;letter-spacing:.08em;text-transform:uppercase">Total</th>`;
+  html += `</tr></thead><tbody>`;
+
+  items.forEach((item, idx) => {
+    const rowTotal = teams.reduce((s,t) => s + (pivot[item][t] || 0), 0);
+    const bg = idx % 2 === 0 ? "rgba(255,255,255,.02)" : "transparent";
+    html += `<tr style="background:${bg}">
+      <td style="padding:7px 12px;color:var(--blue)">${item}</td>`;
+    teams.forEach(t => {
+      const v = pivot[item][t] || 0;
+      html += `<td style="text-align:right;padding:7px 8px;color:${v>0?'var(--text1)':'var(--text3)'}">${v > 0 ? v.toLocaleString() : "—"}</td>`;
+    });
+    html += `<td style="text-align:right;padding:7px 12px;color:var(--accent);font-weight:700">${rowTotal.toLocaleString()}</td>`;
+    html += `</tr>`;
+  });
+
+  // Totals row
+  html += `<tr style="border-top:1px solid var(--border);background:rgba(245,98,15,.05)">
+    <td style="padding:8px 12px;color:var(--text2);font-weight:700;font-size:10px;letter-spacing:.06em;text-transform:uppercase">TOTAL</td>`;
+  let grandTotal = 0;
+  teams.forEach(t => {
+    const v = items.reduce((s,item) => s + (pivot[item][t] || 0), 0);
+    grandTotal += v;
+    html += `<td style="text-align:right;padding:8px 8px;color:var(--text1);font-weight:700">${v.toLocaleString()}</td>`;
+  });
+  html += `<td style="text-align:right;padding:8px 12px;color:var(--accent);font-weight:700">${grandTotal.toLocaleString()}</td>`;
+  html += `</tr></tbody></table>`;
+
+  container.innerHTML = html;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function destroyChart(id) {
+  if (chartInstances[id]) { chartInstances[id].destroy(); delete chartInstances[id]; }
+}
+
+function toast(msg, type = "info") {
+  const c = document.getElementById("toasts");
+  const t = document.createElement("div");
+  t.className = `toast ${type}`;
+  const ic = type === "success" ? "✓" : type === "error" ? "✕" : "ℹ";
+  t.innerHTML = `<span>${ic}</span> ${msg}`;
+  c.appendChild(t);
+  setTimeout(() => {
+    t.style.cssText = "opacity:0;transform:translateX(20px);transition:all .3s";
+    setTimeout(() => t.remove(), 300);
+  }, type === "error" ? 7000 : 4000);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+document.addEventListener("DOMContentLoaded", () => {
+  // Set default date for daily filter to today
+  document.getElementById("teamDate").value = new Date().toISOString().split("T")[0];
+  loadAll();
+});
+</script>
+</body>
+</html>
