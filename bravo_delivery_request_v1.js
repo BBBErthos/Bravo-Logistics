@@ -171,7 +171,6 @@ async function submitRequest() {
 
   const po      = document.getElementById("dPO").value;
   const date    = document.getElementById("dDate").value;
-  const bol     = document.getElementById("dBOL").value.trim();
   const carrier = document.getElementById("dCarrier").value.trim();
   const email   = document.getElementById("dEmail").value.trim();
   const notes   = document.getElementById("dNotes").value.trim();
