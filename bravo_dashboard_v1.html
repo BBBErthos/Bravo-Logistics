@@ -542,19 +542,33 @@ const TOKEN    = "eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjY0MjAyOTczNSwiYWFpIjoxMSwidWlkI
 const MM_BOARD  = "18407396726";
 const MTF_BOARD = "18407069511";
 
-const CRITICAL_ITEMS = [
-  "ITM0002226","ITM0002285","ITM0002197",
-  "ITM0001673","ITM0001674","ITM0001675",
-  "ITM0001676","ITM0001677","ITM0001678"
+// Each entry is one bar on the charts.
+// match: array of description values to sum together into that bar.
+// Ranges like expandRange("ITM",2306,2329) auto-expand to every integer in between.
+const ITEM_GROUPS = [
+  { label: "ITM0002226",       match: ["ITM0002226"] },
+  { label: "ITM0002285",       match: ["ITM0002285"] },
+  { label: "ITM0002197",       match: ["ITM0002197"] },
+  { label: "DC Harnesses",     match: expandRange("ITM", 2306, 2329) },
+  { label: "Perimeter Blocks", match: expandRange("ITM", 1673, 1678) }
 ];
+
+// Expands e.g. expandRange("ITM",2306,2329) =>
+// ["ITM0002306","ITM0002307",...,"ITM0002329"]
+function expandRange(prefix, from, to) {
+  const out = [];
+  for (let n = from; n <= to; n++) out.push(prefix + String(n).padStart(7, "0"));
+  return out;
+}
 
 // MM column IDs (from brief)
 const MM_COL = {
-  itemNumber: "text_mm25tw3r",
-  poQty:      "numeric_mm25kp3n",
-  yardAQty:   "numeric_mm28esrx",
-  yardBQty:   "numeric_mm28rzz8",
-  yardCQty:   "numeric_mm28v4wf"
+  itemNumber:  "text_mm25tw3r",
+  description: "text_mm25y9yp",
+  poQty:       "numeric_mm25kp3n",
+  yardAQty:    "numeric_mm28esrx",
+  yardBQty:    "numeric_mm28rzz8",
+  yardCQty:    "numeric_mm28v4wf"
 };
 
 // MTF column IDs (from brief)
@@ -643,16 +657,18 @@ async function loadMM() {
       const cv = {};
       item.column_values.forEach(c => { cv[c.id] = c.text || ""; });
       const itemNum = cv[MM_COL.itemNumber] || item.name;
+      const desc    = cv[MM_COL.description] || "";
       const poQty   = parseFloat(cv[MM_COL.poQty] || "0") || 0;
       const yardA   = parseFloat(cv[MM_COL.yardAQty] || "0") || 0;
       const yardB   = parseFloat(cv[MM_COL.yardBQty] || "0") || 0;
       const yardC   = parseFloat(cv[MM_COL.yardCQty] || "0") || 0;
       all.push({
-        id:         item.id,
-        name:       item.name,
-        itemNumber: itemNum,
+        id:          item.id,
+        name:        item.name,
+        itemNumber:  itemNum,
+        description: desc,
         poQty,
-        onHandQty:  yardA + yardB + yardC,
+        onHandQty:   yardA + yardB + yardC,
         yardA, yardB, yardC
       });
     });
@@ -689,46 +705,57 @@ async function loadMTF() {
 }
 
 // ── Critical Items — Progress Bars ────────────────────────────────────────────
+function buildGroupTotals() {
+  // Build issued map from MTF keyed by description (uppercase)
+  const issuedByDesc = {};
+  mtfData.forEach(r => {
+    const key = r.item.trim().toUpperCase();
+    issuedByDesc[key] = (issuedByDesc[key] || 0) + r.qty;
+  });
+
+  return ITEM_GROUPS.map(group => {
+    let poQty = 0, onHandQty = 0, issuedQty = 0, foundCount = 0;
+    group.match.forEach(desc => {
+      const key = desc.trim().toUpperCase();
+      const mm  = mmData.find(m => m.description.trim().toUpperCase() === key);
+      if (mm) {
+        poQty     += mm.poQty;
+        onHandQty += mm.onHandQty;
+        foundCount++;
+      }
+      issuedQty += issuedByDesc[key] || 0;
+    });
+    return {
+      label:      group.label,
+      members:    group.match,
+      poQty,
+      onHandQty,
+      issuedQty,
+      found:      foundCount > 0
+    };
+  });
+}
+
 function renderCriticalBars() {
   const container = document.getElementById("criticalBars");
   container.innerHTML = "";
 
-  // Build issued map from MTF
-  const issuedByItem = {};
-  mtfData.forEach(r => {
-    const key = r.item.trim().toUpperCase();
-    issuedByItem[key] = (issuedByItem[key] || 0) + r.qty;
-  });
+  const groups = buildGroupTotals();
 
-  const found = CRITICAL_ITEMS.map(ci => {
-    // Try to match by item number column or by name
-    const mm = mmData.find(m =>
-      m.itemNumber.trim().toUpperCase() === ci.toUpperCase() ||
-      m.name.trim().toUpperCase() === ci.toUpperCase()
-    );
-    const issuedKey = Object.keys(issuedByItem).find(k => k === ci.toUpperCase()) || ci.toUpperCase();
-    return {
-      itemNumber: ci,
-      poQty:      mm ? mm.poQty      : 0,
-      onHandQty:  mm ? mm.onHandQty  : 0,
-      issuedQty:  issuedByItem[issuedKey] || 0,
-      found:      !!mm
-    };
-  });
-
-  if (!found.some(f => f.found)) {
-    container.innerHTML = `<div class="no-data">No matching items found in Material Master.<br>Check item number format.</div>`;
+  if (!groups.some(g => g.found)) {
+    container.innerHTML = `<div class="no-data">No matching items found in Material Master.<br>Check description values match exactly.</div>`;
     return;
   }
 
-  found.forEach(item => {
+  groups.forEach(item => {
     const pctReceived = item.poQty > 0 ? Math.min((item.onHandQty / item.poQty) * 100, 100) : 0;
-    const pctIssued   = item.poQty > 0 ? Math.min((item.issuedQty  / item.poQty) * 100, 100) : 0;
+    const pctIssued   = item.poQty > 0 ? Math.min((item.issuedQty / item.poQty) * 100, 100) : 0;
+    const memberTip   = item.members.length > 1 ? `${item.members.length} items grouped` : item.members[0];
 
     const row = document.createElement("div");
     row.className = "item-row";
     row.innerHTML = `
-      <div class="item-num" title="${item.itemNumber}">${item.itemNumber}</div>
+      <div class="item-num" title="${memberTip}">${item.label}</div>
       <div>
         <div class="bar-stack">
           <div class="bar-received"  style="width:${pctReceived}%"></div>
@@ -737,6 +764,7 @@ function renderCriticalBars() {
         </div>
         <div style="font-family:var(--mono);font-size:9px;color:var(--text3);margin-top:3px">
           PO: ${item.poQty.toLocaleString()} · On Hand: ${item.onHandQty.toLocaleString()} · Issued: ${item.issuedQty.toLocaleString()}
+          ${item.members.length > 1 ? ` · <span style="color:var(--amber)">${item.members.length} items</span>` : ""}
         </div>
       </div>
       <div class="item-pcts">
@@ -749,32 +777,17 @@ function renderCriticalBars() {
 
 // ── Critical Items — Grouped Bar Chart ────────────────────────────────────────
 function renderCriticalChart() {
-  const issuedByItem = {};
-  mtfData.forEach(r => {
-    const key = r.item.trim().toUpperCase();
-    issuedByItem[key] = (issuedByItem[key] || 0) + r.qty;
-  });
-
+  const groups    = buildGroupTotals();
   const labels    = [];
   const received  = [];
   const issued    = [];
   const remaining = [];
 
-  CRITICAL_ITEMS.forEach(ci => {
-    const mm = mmData.find(m =>
-      m.itemNumber.trim().toUpperCase() === ci.toUpperCase() ||
-      m.name.trim().toUpperCase() === ci.toUpperCase()
-    );
-    const issuedKey = Object.keys(issuedByItem).find(k => k === ci.toUpperCase()) || ci.toUpperCase();
-    const poQty    = mm ? mm.poQty     : 0;
-    const onHand   = mm ? mm.onHandQty : 0;
-    const iss      = issuedByItem[issuedKey] || 0;
-    const pctRcvd  = poQty > 0 ? Math.min((onHand / poQty) * 100, 100) : 0;
-    const pctIss   = poQty > 0 ? Math.min((iss    / poQty) * 100, 100) : 0;
-    const pctRem   = Math.max(100 - pctRcvd, 0);
-
-    // Shorten label
-    labels.push(ci.replace("ITM","").replace("ITTM",""));
+  groups.forEach(g => {
+    const pctRcvd = g.poQty > 0 ? Math.min((g.onHandQty / g.poQty) * 100, 100) : 0;
+    const pctIss  = g.poQty > 0 ? Math.min((g.issuedQty / g.poQty) * 100, 100) : 0;
+    const pctRem  = Math.max(100 - pctRcvd, 0);
+    labels.push(g.label);
     received.push(parseFloat(pctRcvd.toFixed(1)));
     issued.push(parseFloat(pctIss.toFixed(1)));
     remaining.push(parseFloat(pctRem.toFixed(1)));
