@@ -20,7 +20,7 @@ const BRAVO_CONFIG = {
   // ── Board IDs ───────────────────────────────────────────────────────────────
   MM_BOARD:  "18407396726",   // Material Master
   DEL_BOARD: "18407062173",   // Delivery Schedule
-  MTF_BOARD: "18407069511",   // Material Transfer Forms
+  MTF_BOARD: "18407396726",   // Material Transfer Forms
   REC_BOARD: "18407084838",   // Receipts
 
   // ── EmailJS ─────────────────────────────────────────────────────────────────
