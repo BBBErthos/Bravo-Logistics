@@ -871,6 +871,7 @@ footer {
   </div>
 </footer>
 
+<script src="config.js"></script>
 <script src="auth.js"></script>
 <script>
 // Set date
@@ -879,7 +880,7 @@ document.getElementById("navDate").textContent =
   now.toLocaleDateString("en-US", { weekday:"short", month:"short", day:"numeric", year:"numeric" });
 
 // Load live stats from Delivery Schedule board
-const TOKEN    = "eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjY1NDg5OTkzNywiYWFpIjoxMSwidWlkIjoxMDE2NTU1NDEsImlhZCI6IjIwMjYtMDUtMDZUMTg6NDI6MTEuMzM5WiIsInBlciI6Im1lOndyaXRlIiwiYWN0aWQiOjM0MDM3NTMzLCJyZ24iOiJ1c2UxIn0.4Pgo0ZvrwXXFjy1ex7fJLpl7BYCM0YRUVIOhz0ECYRU";
+const TOKEN    = BRAVO_CONFIG.TOKEN;
 const DEL_BOARD = "18407062173";
 const STATUS_COL = "color_mm21zhcs";
 const DATE_COL   = "date_mm21td8v";
