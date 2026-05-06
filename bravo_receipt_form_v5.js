@@ -78,6 +78,8 @@ let _inited = false;
 async function init() {
   if (_inited) return;
   _inited = true;
+  const user = await requireAuth();
+  if (!user && typeof AUTH_ENABLED !== "undefined" && AUTH_ENABLED) return;
   setDate(); genId();
   if (SP_ENABLED) checkSpToken();
   await loadMM();
@@ -177,14 +179,26 @@ function renderTable() {
       <div class="icell"><div class="idesc">${item.description}</div></div>
       <div class="icell iuom">${item.uom}</div>
       <div class="icell ipoqty">${item.poQty}</div>
-      <div class="icell"><input type="number" min="0" step="1" placeholder="—" id="q${i}"/></div>
+      <div class="icell"><input type="number" min="0" step="1" placeholder="—" id="q${i}" data-poqty="${item.poQty}" oninput="checkQtyLimit(this)"/></div>
       <div class="icell"><button class="rmv" onclick="clearQ(${i})" title="Clear">×</button></div>`;
     body.appendChild(row);
   });
   document.getElementById("iTable").style.display = "block";
 }
 
-function clearQ(i) { const el = document.getElementById("q" + i); if (el) el.value = ""; }
+function clearQ(i) { const el = document.getElementById("q" + i); if (el) { el.value = ""; el.style.borderColor = ""; el.title = ""; } }
+
+function checkQtyLimit(input) {
+  const poQty = parseFloat(input.dataset.poqty) || 0;
+  const val   = parseFloat(input.value);
+  if (!isNaN(val) && poQty > 0 && val > poQty) {
+    input.style.borderColor = "var(--red)";
+    input.title = `Exceeds PO quantity of ${poQty}`;
+  } else {
+    input.style.borderColor = "";
+    input.title = "";
+  }
+}
 
 // ── UI helpers ────────────────────────────────────────────────────────────────
 function typeChange() {
@@ -298,6 +312,17 @@ function validate() {
     return v && v.value !== "";
   });
   if (!hasQty) errs.push("Enter a quantity for at least one item (0 is acceptable)");
+
+  // Check no item exceeds its PO quantity
+  poItems.forEach((item, i) => {
+    const el  = document.getElementById("q" + i);
+    if (!el || el.value === "") return;
+    const val   = parseInt(el.value) || 0;
+    const poQty = parseFloat(item.poQty) || 0;
+    if (poQty > 0 && val > poQty) {
+      errs.push(`${item.itemNumber}: quantity ${val} exceeds PO quantity of ${poQty}`);
+    }
+  });
   return errs;
 }
 
