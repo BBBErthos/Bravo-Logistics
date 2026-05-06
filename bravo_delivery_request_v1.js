@@ -1,5 +1,5 @@
 // ── Config ────────────────────────────────────────────────────────────────────
-const TOKEN    = "eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjY0MjAyOTczNSwiYWFpIjoxMSwidWlkIjoxMDE2NTU1NDEsImlhZCI6IjIwMjYtMDQtMDZUMTY6MTU6NDEuMDAwWiIsInBlciI6Im1lOndyaXRlIiwiYWN0aWQiOjM0MDM3NTMzLCJyZ24iOiJ1c2UxIn0.xhq8Fz24KVtwvLHPuxUR4lZ6Y_WoZHvximfIa9hmnYM";
+const TOKEN    = "eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjY1NDg5OTkzNywiYWFpIjoxMSwidWlkIjoxMDE2NTU1NDEsImlhZCI6IjIwMjYtMDUtMDZUMTg6NDI6MTEuMzM5WiIsInBlciI6Im1lOndyaXRlIiwiYWN0aWQiOjM0MDM3NTMzLCJyZ24iOiJ1c2UxIn0.4Pgo0ZvrwXXFjy1ex7fJLpl7BYCM0YRUVIOhz0ECYRU";
 const MM_BOARD  = "18407396726";
 const DEL_BOARD = "18407062173";
 
