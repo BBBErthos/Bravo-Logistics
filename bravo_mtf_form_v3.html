@@ -293,9 +293,9 @@ textarea{resize:vertical;min-height:80px}
 <script src="auth.js"></script>
 <script>
 // ── Config ────────────────────────────────────────────────────────────────────
-const TOKEN     = "eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjY1NDg5OTkzNywiYWFpIjoxMSwidWlkIjoxMDE2NTU1NDEsImlhZCI6IjIwMjYtMDUtMDZUMTg6NDI6MTEuMzM5WiIsInBlciI6Im1lOndyaXRlIiwiYWN0aWQiOjM0MDM3NTMzLCJyZ24iOiJ1c2UxIn0.4Pgo0ZvrwXXFjy1ex7fJLpl7BYCM0YRUVIOhz0ECYRU";
-const MM_BOARD  = "18407396726";
-const MTF_BOARD = "18407069511";
+const TOKEN     = BRAVO_CONFIG.TOKEN;
+const MM_BOARD  = BRAVO_CONFIG.MM_BOARD;
+const MTF_BOARD = BRAVO_CONFIG.MTF_BOARD;
 
 // Hardcoded MTF board column IDs
 const COL = {
@@ -520,8 +520,8 @@ function initSig() {
   canvas.width  = wrap.clientWidth  || 800;
   canvas.height = 180;
   const ctx = canvas.getContext("2d");
-  ctx.strokeStyle = "#1a2b3c";
-  ctx.lineWidth   = 2.5;
+  ctx.strokeStyle = "#e6edf3";
+  ctx.lineWidth   = 2;
   ctx.lineCap     = "round";
   ctx.lineJoin    = "round";
 
@@ -575,15 +575,7 @@ function clearSig() {
 }
 
 function getSigDataURL() {
-  const src = document.getElementById("sigCanvas");
-  const flat = document.createElement("canvas");
-  flat.width  = src.width;
-  flat.height = src.height;
-  const ctx = flat.getContext("2d");
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, flat.width, flat.height);
-  ctx.drawImage(src, 0, 0);
-  return flat.toDataURL("image/png");
+  return document.getElementById("sigCanvas").toDataURL("image/png");
 }
 
 // ── SharePoint / Microsoft Graph auth ────────────────────────────────────────

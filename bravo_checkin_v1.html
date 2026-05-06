@@ -51,10 +51,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:16
 .dc-value{font-size:15px;color:var(--text);font-weight:500;margin-top:1px}
 .dc-status{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;font-family:var(--mono);padding:3px 10px;border-radius:4px;text-transform:uppercase;letter-spacing:.06em}
 .dc-status.scheduled{background:#E8F5E9;color:#1B7A3E;border:1.5px solid #A5D6A7}
-.delivery-card.expired{border-color:#D32F2F;background:#FFF5F5;box-shadow:0 0 0 1px #D32F2F,0 4px 12px rgba(211,47,47,0.15)}
-.delivery-card.expired:hover{border-color:#B71C1C;box-shadow:0 0 0 1px #B71C1C,0 4px 16px rgba(183,28,28,0.25)}
-.dc-status.expired{background:#FFEBEE;color:#C62828;border:1.5px solid #EF9A9A}
-.expired-badge{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#C62828;background:#FFEBEE;border:1.5px solid #EF9A9A;padding:2px 8px;border-radius:4px}
 
 /* Empty / loading states */
 .state-box{text-align:center;padding:60px 20px;background:var(--surface);border-radius:var(--r);border:2px solid var(--border)}
@@ -119,15 +115,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:16
 .info-btn{width:22px;height:22px;border-radius:50%;background:#90A4B4;color:#fff;font-size:11px;font-weight:700;border:2px solid #fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;margin-left:6px;vertical-align:middle;line-height:1;box-shadow:0 1px 4px rgba(0,0,0,0.15)}
 .info-btn:hover,.info-btn.active{background:#F5620F;border-color:#F5620F;box-shadow:0 2px 8px rgba(245,98,15,0.4)}
 .info-tip{display:none;position:fixed;background:#FFFFFF;color:#1A2B3C;font-size:13px;font-weight:500;line-height:1.6;padding:14px 18px;border-radius:8px;width:260px;box-shadow:0 8px 32px rgba(0,0,0,0.18),0 0 0 1.5px #E0E7EF;z-index:9999;pointer-events:none}
-.tally-panel{background:var(--surface);border:2px solid var(--border);border-radius:var(--r);padding:18px;margin-bottom:20px}
-.tally-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-.tally-title{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text3)}
-.tally-total{font-family:var(--mono);font-size:12px;font-weight:700;color:#C62828;background:#FFEBEE;border:1.5px solid #EF9A9A;padding:3px 10px;border-radius:4px}
-.tally-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:14px}
-.tally-row:last-child{border-bottom:none}
-.tally-company{color:var(--text);font-weight:500;flex:1}
-.tally-count{font-family:var(--mono);font-size:13px;font-weight:700;color:#C62828;background:#FFEBEE;min-width:28px;text-align:center;padding:2px 8px;border-radius:4px}
-.tally-empty{text-align:center;padding:16px;color:var(--text3);font-size:14px}
 .info-tip.show{display:block}
 </style>
 </head>
@@ -161,18 +148,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:16
 
     <!-- Delivery list -->
     <div class="section">
-      <!-- No-Show / Cancelled Tally -->
-      <div class="tally-panel" id="tallyPanel" style="display:none">
-        <div class="tally-header" onclick="toggleTally()" style="cursor:pointer;user-select:none">
-          <span class="tally-title">⚠ Missed Deliveries — No Show / Cancelled</span>
-          <div style="display:flex;align-items:center;gap:8px">
-            <span class="tally-total" id="tallyTotal">0 total</span>
-            <span id="tallyChevron" style="font-family:var(--mono);font-size:12px;color:var(--text3);transition:transform .2s">▼</span>
-          </div>
-        </div>
-        <div id="tallyRows" style="display:none"></div>
-      </div>
-
       <div class="slabel">Today's scheduled deliveries</div>
       <div id="deliveryArea">
         <div class="spin-wrap"><div class="spin"></div>Loading scheduled deliveries...</div>
@@ -206,8 +181,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:16
 <script src="auth.js"></script>
 <script>
 // ── Config ────────────────────────────────────────────────────────────────────
-const TOKEN    = "eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjY1NDg5OTkzNywiYWFpIjoxMSwidWlkIjoxMDE2NTU1NDEsImlhZCI6IjIwMjYtMDUtMDZUMTg6NDI6MTEuMzM5WiIsInBlciI6Im1lOndyaXRlIiwiYWN0aWQiOjM0MDM3NTMzLCJyZ24iOiJ1c2UxIn0.4Pgo0ZvrwXXFjy1ex7fJLpl7BYCM0YRUVIOhz0ECYRU";
-const DEL_BOARD = "18407062173";
+const TOKEN    = BRAVO_CONFIG.TOKEN;
+const DEL_BOARD = BRAVO_CONFIG.DEL_BOARD;
 
 const DEL_COL = {
   bol:       "text_mm21d399",
@@ -275,45 +250,30 @@ async function loadDeliveries() {
 
     const items = d.boards[0].items_page.items;
     deliveries = [];
-    const missed = []; // No Show / Cancelled across all dates
 
     items.forEach(item => {
       const cv = {};
       item.column_values.forEach(c => { cv[c.id] = c.text || ""; });
       const itemDate   = cv[DEL_COL.date];
       const itemStatus = cv[DEL_COL.status];
-
-      // Collect No Show / Cancelled for tally (all time)
-      if (itemStatus === "No Show" || itemStatus === "Cancelled") {
-        missed.push({ carrier: cv[DEL_COL.carrier] || "Unknown", status: itemStatus });
-      }
-
-      // Show Scheduled deliveries for today — plus expired Scheduled from prior dates
-      if (itemStatus === "Scheduled") {
-        if (itemDate === today || itemDate < today) {
-          deliveries.push({
-            id:       item.id,
-            name:     item.name,
-            date:     itemDate,
-            timeSlot: cv[DEL_COL.timeSlot],
-            yard:     cv[DEL_COL.yard],
-            po:       cv[DEL_COL.poNumber],
-            carrier:  cv[DEL_COL.carrier],
-            bol:      cv[DEL_COL.bol],
-            status:   itemStatus,
-            expired:  itemDate < today
-          });
-        }
+      // Show Scheduled deliveries for today
+      if (itemDate === today && itemStatus === "Scheduled") {
+        deliveries.push({
+          id:       item.id,
+          name:     item.name,
+          date:     itemDate,
+          timeSlot: cv[DEL_COL.timeSlot],
+          yard:     cv[DEL_COL.yard],
+          po:       cv[DEL_COL.poNumber],
+          carrier:  cv[DEL_COL.carrier],
+          bol:      cv[DEL_COL.bol],
+          status:   itemStatus
+        });
       }
     });
 
-    // Sort: today's by time slot first, then expired (past dates) at the bottom
-    deliveries.sort((a, b) => {
-      if (a.expired !== b.expired) return a.expired ? 1 : -1;
-      return (a.timeSlot || "").localeCompare(b.timeSlot || "");
-    });
-
-    renderTally(missed);
+    // Sort by time slot
+    deliveries.sort((a, b) => (a.timeSlot || "").localeCompare(b.timeSlot || ""));
 
     if (deliveries.length === 0) {
       area.innerHTML = `
@@ -344,14 +304,12 @@ function renderDeliveryList() {
 
   deliveries.forEach(del => {
     const card = document.createElement("div");
-    const expiredClass = del.expired ? " expired" : "";
-    card.className = "delivery-card" + (selectedItem?.id === del.id ? " selected" : "") + expiredClass;
+    card.className = "delivery-card" + (selectedItem?.id === del.id ? " selected" : "");
     card.onclick = () => selectDelivery(del);
     card.innerHTML = `
       <div class="dc-top">
         <div class="dc-ref">${del.name}</div>
         <div style="display:flex;align-items:center;gap:8px">
-          ${del.expired ? `<div class="expired-badge">⚠ Past Date</div>` : ""}
           <div class="dc-time">${del.timeSlot || "—"}</div>
           <div class="dc-yard">${del.yard || "—"}</div>
         </div>
@@ -359,7 +317,7 @@ function renderDeliveryList() {
       <div class="dc-details">
         <div class="dc-field">
           <div class="dc-label">Date</div>
-          <div class="dc-value" style="${del.expired ? "color:#C62828;font-weight:700" : ""}">${del.date || "—"}</div>
+          <div class="dc-value">${del.date || "—"}</div>
         </div>
         <div class="dc-field">
           <div class="dc-label">PO Number</div>
@@ -375,7 +333,7 @@ function renderDeliveryList() {
         </div>
         <div class="dc-field">
           <div class="dc-label">Status</div>
-          <div class="dc-value"><span class="dc-status ${del.expired ? "expired" : "scheduled"}">${del.expired ? "⚠ Expired" : "Scheduled"}</span></div>
+          <div class="dc-value"><span class="dc-status scheduled">Scheduled</span></div>
         </div>
       </div>`;
     list.appendChild(card);
@@ -459,65 +417,6 @@ async function reset() {
   document.getElementById("fw").classList.remove("hidden");
   document.getElementById("ss").classList.remove("vis");
   await loadDeliveries();
-}
-
-// ── No-Show / Cancelled Tally ─────────────────────────────────────────────────
-function toggleTally() {
-  const rows     = document.getElementById("tallyRows");
-  const chevron  = document.getElementById("tallyChevron");
-  const open     = rows.style.display !== "none";
-  rows.style.display    = open ? "none" : "block";
-  chevron.style.transform = open ? "" : "rotate(180deg)";
-}
-
-function renderTally(missed) {
-  const panel = document.getElementById("tallyPanel");
-  const rows  = document.getElementById("tallyRows");
-  const total = document.getElementById("tallyTotal");
-
-  if (!missed.length) {
-    panel.style.display = "none";
-    return;
-  }
-
-  // Count by carrier
-  const counts = {};
-  missed.forEach(m => {
-    const key = m.carrier.trim() || "Unknown";
-    if (!counts[key]) counts[key] = { noShow: 0, cancelled: 0 };
-    if (m.status === "No Show")   counts[key].noShow++;
-    if (m.status === "Cancelled") counts[key].cancelled++;
-  });
-
-  // Sort by total descending
-  const sorted = Object.entries(counts).sort((a,b) => {
-    const ta = a[1].noShow + a[1].cancelled;
-    const tb = b[1].noShow + b[1].cancelled;
-    return tb - ta;
-  });
-
-  total.textContent = `${missed.length} total`;
-
-  rows.innerHTML = sorted.map(([company, ct]) => {
-    const t = ct.noShow + ct.cancelled;
-    const detail = [
-      ct.noShow    ? `${ct.noShow} no-show${ct.noShow    !== 1 ? "s" : ""}` : "",
-      ct.cancelled ? `${ct.cancelled} cancelled`                             : ""
-    ].filter(Boolean).join(" · ");
-    return `
-      <div class="tally-row">
-        <div class="tally-company">
-          ${company}
-          <span style="font-size:12px;color:var(--text3);margin-left:6px">(${detail})</span>
-        </div>
-        <div class="tally-count">${t}</div>
-      </div>`;
-  }).join("");
-
-  // Always start collapsed
-  rows.style.display = "none";
-  document.getElementById("tallyChevron").style.transform = "";
-  panel.style.display = "block";
 }
 
 // ── Toast ─────────────────────────────────────────────────────────────────────

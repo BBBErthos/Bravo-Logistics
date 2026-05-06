@@ -1,12 +1,12 @@
 // ── Config ────────────────────────────────────────────────────────────────────
-const TOKEN    = "eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjY1NDg5OTkzNywiYWFpIjoxMSwidWlkIjoxMDE2NTU1NDEsImlhZCI6IjIwMjYtMDUtMDZUMTg6NDI6MTEuMzM5WiIsInBlciI6Im1lOndyaXRlIiwiYWN0aWQiOjM0MDM3NTMzLCJyZ24iOiJ1c2UxIn0.4Pgo0ZvrwXXFjy1ex7fJLpl7BYCM0YRUVIOhz0ECYRU";
-const MM_BOARD  = "18407396726";
-const DEL_BOARD = "18407062173";
+const TOKEN    = BRAVO_CONFIG.TOKEN;
+const MM_BOARD  = BRAVO_CONFIG.MM_BOARD;
+const DEL_BOARD = BRAVO_CONFIG.DEL_BOARD;
 
 // EmailJS config
-const EJS_PUBLIC_KEY   = "jd_aZusTeEuo9B1Jw";
-const EJS_SERVICE_ID   = "service_vwvutqf";
-const EJS_REQUEST_TPL  = "template_89pfqxd";
+const EJS_PUBLIC_KEY   = BRAVO_CONFIG.EJS_PUBLIC_KEY;
+const EJS_SERVICE_ID   = BRAVO_CONFIG.EJS_SERVICE_ID;
+const EJS_REQUEST_TPL  = BRAVO_CONFIG.EJS_REQUEST_TPL;
 
 // Delivery board column IDs
 const DEL_COL = {
@@ -21,7 +21,7 @@ const DEL_COL = {
 };
 
 // Confirm form base URL — update if hosted elsewhere
-const CONFIRM_BASE_URL = "https://bbberthos.github.io/Bravo-Logistics/bravo_delivery_confirm_v1.html";
+const CONFIRM_BASE_URL = BRAVO_CONFIG.CONFIRM_BASE_URL;
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", init);
@@ -30,6 +30,8 @@ let _inited = false;
 async function init() {
   if (_inited) return;
   _inited = true;
+  const user = await requireAuth();
+  if (!user && typeof AUTH_ENABLED !== "undefined" && AUTH_ENABLED) return;
   setDateLimits();
   genId();
   await loadPOs();
@@ -141,43 +143,23 @@ function validate() {
 }
 
 // ── Submit ────────────────────────────────────────────────────────────────────
-// Track whether user confirmed BOL duplicate
-let _bolDuplicateConfirmed = false;
-let _bolQualifier = "";
-
 async function submitRequest() {
   const errs = validate();
   if (errs.length) { toast(errs[0], "error"); return; }
-
-  const bol = document.getElementById("dBOL").value.trim();
-
-  // Check for duplicate BOL unless already confirmed
-  if (bol && !_bolDuplicateConfirmed) {
-    try {
-      const d = await gql(`query{boards(ids:[${DEL_BOARD}]){items_page(limit:200){items{column_values{id text}}}}}`);
-      const existing = d.boards[0].items_page.items.filter(item => {
-        const cv = {}; item.column_values.forEach(c => { cv[c.id] = c.text || ""; });
-        return cv[DEL_COL.bol] === bol;
-      });
-      if (existing.length > 0) {
-        showBolWarning(bol, existing.length);
-        return;
-      }
-    } catch(e) { console.warn("BOL check failed:", e); }
-  }
 
   const btn = document.getElementById("subBtn");
   btn.disabled = true; btn.textContent = "Submitting...";
 
   const po      = document.getElementById("dPO").value;
   const date    = document.getElementById("dDate").value;
+  const bol     = document.getElementById("dBOL").value.trim();
   const carrier = document.getElementById("dCarrier").value.trim();
   const email   = document.getElementById("dEmail").value.trim();
   const notes   = document.getElementById("dNotes").value.trim();
   const dateStr = date.replace(/-/g, "");
   // Get sequential number for today
   const todayCount = await getTodayDeliveryCount(date);
-  const ref     = `DEL-${dateStr}-${String(todayCount).padStart(3,"0")}${_bolQualifier}`;
+  const ref     = `DEL-${dateStr}-${String(todayCount).padStart(3,"0")}`;
 
   try {
     // Step 1: Create pending item on Delivery Schedule board
@@ -237,46 +219,7 @@ function reset() {
   clearForm(); genId();
 }
 
-function showBolWarning(bol, count) {
-  // Inject dialog if not present
-  if (!document.getElementById("bolWarnDialog")) {
-    const overlay = document.createElement("div");
-    overlay.id = "bolWarnDialog";
-    overlay.style.cssText = "display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2000;align-items:center;justify-content:center";
-    overlay.innerHTML = `
-      <div style="background:#fff;border-radius:8px;padding:28px;max-width:400px;width:90%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.3)">
-        <div style="font-size:32px;margin-bottom:12px">⚠️</div>
-        <h3 style="font-size:16px;font-weight:700;color:#1A2B3C;margin-bottom:10px">Duplicate BOL detected</h3>
-        <p style="font-size:14px;color:#374A5C;margin-bottom:6px">BOL <strong id="bolWarnNum"></strong> has already been used <span id="bolWarnCount"></span> in the system.</p>
-        <p style="font-size:13px;color:#6B7C8D;margin-bottom:20px">If this is a separate delivery on the same BOL, a <strong>-01</strong> qualifier will be added to the appointment reference. Are you sure you want to continue?</p>
-        <div style="display:flex;gap:10px">
-          <button onclick="closeBolWarning()" style="flex:1;padding:12px;border-radius:6px;border:2px solid #B0BAC5;background:#E8ECF0;color:#374A5C;font-size:14px;font-weight:600;cursor:pointer">Go back</button>
-          <button onclick="confirmBolDuplicate()" style="flex:1;padding:12px;border-radius:6px;border:none;background:#B45000;color:#fff;font-size:14px;font-weight:600;cursor:pointer">Continue with -01</button>
-        </div>
-      </div>`;
-    document.body.appendChild(overlay);
-  }
-  document.getElementById("bolWarnNum").textContent   = bol;
-  document.getElementById("bolWarnCount").textContent = count === 1 ? "once" : `${count} times`;
-  document.getElementById("bolWarnDialog").style.display = "flex";
-}
-
-function closeBolWarning() {
-  document.getElementById("bolWarnDialog").style.display = "none";
-  const btn = document.getElementById("subBtn");
-  btn.disabled = false; btn.textContent = "Submit delivery request";
-}
-
-function confirmBolDuplicate() {
-  document.getElementById("bolWarnDialog").style.display = "none";
-  _bolDuplicateConfirmed = true;
-  _bolQualifier = "-01";
-  submitRequest();
-}
-
 function clearForm() {
-  _bolDuplicateConfirmed = false;
-  _bolQualifier = "";
   setDateLimits();
   document.getElementById("dPO").selectedIndex = 0;
   ["dBOL","dCarrier","dEmail","dNotes"].forEach(id => document.getElementById(id).value = "");

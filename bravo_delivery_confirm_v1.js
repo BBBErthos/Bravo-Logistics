@@ -1,10 +1,10 @@
 // ── Config ────────────────────────────────────────────────────────────────────
-const TOKEN    = "eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjY1NDg5OTkzNywiYWFpIjoxMSwidWlkIjoxMDE2NTU1NDEsImlhZCI6IjIwMjYtMDUtMDZUMTg6NDI6MTEuMzM5WiIsInBlciI6Im1lOndyaXRlIiwiYWN0aWQiOjM0MDM3NTMzLCJyZ24iOiJ1c2UxIn0.4Pgo0ZvrwXXFjy1ex7fJLpl7BYCM0YRUVIOhz0ECYRU";
-const DEL_BOARD = "18407062173";
+const TOKEN    = BRAVO_CONFIG.TOKEN;
+const DEL_BOARD = BRAVO_CONFIG.DEL_BOARD;
 
-const EJS_PUBLIC_KEY  = "jd_aZusTeEuo9B1Jw";
-const EJS_SERVICE_ID  = "service_vwvutqf";
-const EJS_CONFIRM_TPL = "template_a4j8kyk";
+const EJS_PUBLIC_KEY  = BRAVO_CONFIG.EJS_PUBLIC_KEY;
+const EJS_SERVICE_ID  = BRAVO_CONFIG.EJS_SERVICE_ID;
+const EJS_CONFIRM_TPL = BRAVO_CONFIG.EJS_CONFIRM_TPL;
 
 const DEL_COL = {
   bol:      "text_mm21d399",
@@ -76,6 +76,10 @@ let _inited = false;
 async function init() {
   if (_inited) return;
   _inited = true;
+  const user = await requireAuth();
+  if (!user && typeof AUTH_ENABLED !== "undefined" && AUTH_ENABLED) return;
+
+  // Init EmailJS safely
 
   // Parse URL params
   const params = new URLSearchParams(window.location.search);
@@ -324,66 +328,16 @@ function validate() {
   return errs;
 }
 
-// ── Past-date warning ─────────────────────────────────────────────────────────
-let _pastDateConfirmed = false;
-
-function showPastDateWarning(date) {
-  if (!document.getElementById("pastDateDialog")) {
-    const overlay = document.createElement("div");
-    overlay.id = "pastDateDialog";
-    overlay.style.cssText = "display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:2000;align-items:center;justify-content:center";
-    overlay.innerHTML = `
-      <div style="background:#fff;border-radius:8px;padding:28px;max-width:400px;width:90%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.3)">
-        <div style="font-size:32px;margin-bottom:12px">⚠️</div>
-        <h3 style="font-size:16px;font-weight:700;color:#1A2B3C;margin-bottom:10px">Past date selected</h3>
-        <p style="font-size:14px;color:#374A5C;margin-bottom:6px">
-          The scheduled date <strong id="pastDateVal"></strong> is in the past.
-        </p>
-        <p style="font-size:13px;color:#6B7C8D;margin-bottom:20px">
-          This request was not confirmed before its preferred date. You can go back and update the date, or confirm as-is if this is intentional.
-        </p>
-        <div style="display:flex;gap:10px">
-          <button onclick="closePastDateWarning()" style="flex:1;padding:12px;border-radius:6px;border:2px solid #B0BAC5;background:#E8ECF0;color:#374A5C;font-size:14px;font-weight:600;cursor:pointer">Go back</button>
-          <button onclick="confirmPastDate()" style="flex:1;padding:12px;border-radius:6px;border:none;background:#B45000;color:#fff;font-size:14px;font-weight:600;cursor:pointer">Confirm anyway</button>
-        </div>
-      </div>`;
-    document.body.appendChild(overlay);
-  }
-  document.getElementById("pastDateVal").textContent = date;
-  document.getElementById("pastDateDialog").style.display = "flex";
-}
-
-function closePastDateWarning() {
-  document.getElementById("pastDateDialog").style.display = "none";
-  const btn = document.getElementById("subBtn");
-  btn.disabled = false; btn.textContent = "Confirm appointment & notify dispatcher";
-}
-
-function confirmPastDate() {
-  document.getElementById("pastDateDialog").style.display = "none";
-  _pastDateConfirmed = true;
-  confirmAppt();
-}
-
 // ── Confirm ───────────────────────────────────────────────────────────────────
 async function confirmAppt() {
   const errs = validate();
   if (errs.length) { toast(errs[0], "error"); return; }
 
-  const date  = document.getElementById("cDate").value;
-  const today = new Date().toISOString().split("T")[0];
-
-  // Warn if scheduling into the past (and not yet confirmed)
-  if (!_pastDateConfirmed && date < today) {
-    showPastDateWarning(date);
-    return;
-  }
-  _pastDateConfirmed = false;
-
   const btn = document.getElementById("subBtn");
   btn.disabled = true; btn.textContent = "Confirming...";
 
   const yard = document.getElementById("cYard").value;
+  const date = document.getElementById("cDate").value;
 
   try {
     // Race condition guard — re-check slot
