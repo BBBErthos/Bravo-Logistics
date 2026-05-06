@@ -179,24 +179,48 @@ function renderTable() {
       <div class="icell"><div class="idesc">${item.description}</div></div>
       <div class="icell iuom">${item.uom}</div>
       <div class="icell ipoqty">${item.poQty}</div>
-      <div class="icell"><input type="number" min="0" step="1" placeholder="—" id="q${i}" data-poqty="${item.poQty}" oninput="checkQtyLimit(this)"/></div>
+      <div class="icell"><input type="number" step="1" placeholder="—" id="q${i}" data-poqty="${item.poQty}" oninput="checkQtyLimit(this)"/></div>
       <div class="icell"><button class="rmv" onclick="clearQ(${i})" title="Clear">×</button></div>`;
     body.appendChild(row);
   });
   document.getElementById("iTable").style.display = "block";
 }
 
-function clearQ(i) { const el = document.getElementById("q" + i); if (el) { el.value = ""; el.style.borderColor = ""; el.title = ""; } }
+function clearQ(i) {
+  const el = document.getElementById("q" + i);
+  if (el) {
+    el.value = "";
+    el.style.borderColor     = "";
+    el.style.backgroundColor = "";
+    el.title = "";
+    const errEl = document.getElementById("q" + i + "_err");
+    if (errEl) errEl.remove();
+  }
+}
 
 function checkQtyLimit(input) {
-  const poQty = parseFloat(input.dataset.poqty) || 0;
-  const val   = parseFloat(input.value);
+  const poQty   = parseFloat(input.dataset.poqty) || 0;
+  const val     = parseFloat(input.value);
+  const errId   = input.id + "_err";
+  let errEl     = document.getElementById(errId);
+
   if (!isNaN(val) && poQty > 0 && val > poQty) {
-    input.style.borderColor = "var(--red)";
+    input.style.borderColor     = "var(--red, #C62828)";
+    input.style.backgroundColor = "rgba(198,40,40,0.06)";
     input.title = `Exceeds PO quantity of ${poQty}`;
+    // Show inline error message under the input
+    if (!errEl) {
+      errEl = document.createElement("div");
+      errEl.id = errId;
+      errEl.style.cssText = "color:#C62828;font-size:10px;font-family:var(--mono);margin-top:3px;font-weight:600";
+      input.parentNode.appendChild(errEl);
+    }
+    errEl.textContent = `Max: ${Number(poQty).toLocaleString()}`;
   } else {
-    input.style.borderColor = "";
+    input.style.borderColor     = "";
+    input.style.backgroundColor = "";
     input.title = "";
+    if (errEl) errEl.remove();
   }
 }
 
