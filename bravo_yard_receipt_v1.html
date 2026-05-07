@@ -325,7 +325,6 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:16
 
 <div class="toasts" id="toasts"></div>
 
-<script src="config.js"></script>
 <script>
 const TOKEN     = BRAVO_CONFIG.TOKEN;
 const MM_BOARD  = BRAVO_CONFIG.MM_BOARD;
@@ -537,16 +536,25 @@ async function backToQueue() {
 
 // ── Item rows ─────────────────────────────────────────────────────────────────
 function capQty(input, max) {
-  if (!max) return;
-  const val = parseInt(input.value) || 0;
-  if (val > max) {
-    input.value = max;
-    input.style.borderColor = "var(--amber)";
-    input.style.background  = "var(--amber-dim)";
-    toast(`Max receivable for this item is ${max}`, "info");
+  const val   = parseFloat(input.value);
+  const errId = input.id + "_err";
+  let errEl   = document.getElementById(errId);
+  if (!isNaN(val) && max > 0 && val > max) {
+    input.style.borderColor     = "#C62828";
+    input.style.backgroundColor = "rgba(198,40,40,0.06)";
+    input.title = `Exceeds PO quantity of ${max}`;
+    if (!errEl) {
+      errEl = document.createElement("div");
+      errEl.id = errId;
+      errEl.style.cssText = "color:#C62828;font-size:10px;font-family:var(--mono);margin-top:3px;font-weight:600";
+      input.parentNode.appendChild(errEl);
+    }
+    errEl.textContent = `Max: ${Number(max).toLocaleString()}`;
   } else {
-    input.style.borderColor = "";
-    input.style.background  = "";
+    input.style.borderColor     = "";
+    input.style.backgroundColor = "";
+    input.title = "";
+    if (errEl) errEl.remove();
   }
 }
 
@@ -564,7 +572,7 @@ function renderItemRows() {
       <div class="i-cell iuom" style="text-align:center">${item.uom}</div>
       <div class="i-cell iuom" style="text-align:center;font-weight:600;color:var(--text2)">${poQty||"—"}</div>
       <div class="i-cell" style="padding:8px">
-        <input type="number" min="0" max="${poQty||999999}" step="1" placeholder="0" id="gq${i}"
+        <input type="number" min="0" step="1" placeholder="0" id="gq${i}" autocomplete="off"
           oninput="capQty(this,${poQty})"/>
       </div>`;
     good.appendChild(gr);
@@ -645,6 +653,17 @@ async function submitReceipt() {
   });
 
   if(!toSubmit.some(i=>i.qty>0||i.dmgQty>0)){toast("Enter at least one quantity","error");return;}
+
+  // Block submit if any good qty exceeds PO qty
+  const overQty = [];
+  poItems.forEach((item,i)=>{
+    const gEl = document.getElementById(`gq${i}`);
+    if (!gEl || gEl.value === "") return;
+    const val   = parseFloat(gEl.value) || 0;
+    const poQty = parseFloat((String(item.poQty||"0")).replace(/,/g,"")) || 0;
+    if (poQty > 0 && val > poQty) overQty.push(`${item.itemNumber}: qty ${val.toLocaleString()} exceeds PO qty of ${poQty.toLocaleString()}`);
+  });
+  if (overQty.length) { toast(overQty[0], "error"); return; }
 
   btn.disabled=true; btn.textContent="Submitting...";
   const prog=document.getElementById("prog"); prog.classList.add("vis");
@@ -1020,6 +1039,7 @@ document.addEventListener('click', function(e) {
   }
 });
 </script>
+<script src="config.js"></script>
 <script src="auth.js"></script>
 </body>
 </html>

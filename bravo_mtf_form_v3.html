@@ -482,7 +482,7 @@ function renderTable() {
       <div class="icell"><div class="idesc">${item.description}</div></div>
       <div class="icell iuom">${item.uom}</div>
       <div class="icell ionhand">${onHand}</div>
-      <div class="icell"><input type="number" min="0" max="${onHand}" step="1" placeholder="—" id="q${i}" oninput="clampQty(this, ${onHand})"/></div>
+      <div class="icell"><input type="number" min="0" step="1" placeholder="—" id="q${i}" autocomplete="off" oninput="clampQty(this, ${onHand})"/></div>
       <div class="icell"><button class="rmv" onclick="clearQ(${i})" title="Clear">×</button></div>`;
     body.appendChild(row);
   });
@@ -503,14 +503,25 @@ function filterRows() {
 function clearQ(i) { const el = document.getElementById("q" + i); if (el) el.value = ""; }
 
 function clampQty(input, maxVal) {
-  const val = parseInt(input.value);
-  if (!isNaN(val) && val > maxVal) {
-    input.value = maxVal;
-    input.style.borderColor = "var(--amber)";
-    toast(`Max available quantity is ${maxVal}`, "info");
-    setTimeout(() => { input.style.borderColor = ""; }, 2000);
+  const val   = parseFloat(input.value);
+  const errId = input.id + "_err";
+  let errEl   = document.getElementById(errId);
+  if (!isNaN(val) && maxVal > 0 && val > maxVal) {
+    input.style.borderColor     = "#C62828";
+    input.style.backgroundColor = "rgba(198,40,40,0.06)";
+    input.title = `Exceeds available quantity of ${maxVal}`;
+    if (!errEl) {
+      errEl = document.createElement("div");
+      errEl.id = errId;
+      errEl.style.cssText = "color:#C62828;font-size:10px;font-family:var(--mono);margin-top:3px;font-weight:600";
+      input.parentNode.appendChild(errEl);
+    }
+    errEl.textContent = `Max: ${Number(maxVal).toLocaleString()}`;
   } else {
-    input.style.borderColor = "";
+    input.style.borderColor     = "";
+    input.style.backgroundColor = "";
+    input.title = "";
+    if (errEl) errEl.remove();
   }
 }
 
@@ -521,8 +532,8 @@ function initSig() {
   canvas.width  = wrap.clientWidth  || 800;
   canvas.height = 180;
   const ctx = canvas.getContext("2d");
-  ctx.strokeStyle = "#1a2b3c";
-  ctx.lineWidth   = 2.5;
+  ctx.strokeStyle = "#e6edf3";
+  ctx.lineWidth   = 2;
   ctx.lineCap     = "round";
   ctx.lineJoin    = "round";
 
@@ -576,15 +587,7 @@ function clearSig() {
 }
 
 function getSigDataURL() {
-  const src = document.getElementById("sigCanvas");
-  const flat = document.createElement("canvas");
-  flat.width  = src.width;
-  flat.height = src.height;
-  const ctx = flat.getContext("2d");
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, flat.width, flat.height);
-  ctx.drawImage(src, 0, 0);
-  return flat.toDataURL("image/png");
+  return document.getElementById("sigCanvas").toDataURL("image/png");
 }
 
 // ── SharePoint / Microsoft Graph auth ────────────────────────────────────────
