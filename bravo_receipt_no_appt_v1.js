@@ -230,6 +230,14 @@ function renderReceiptList() {
   const wrap  = document.getElementById("receiptListWrap");
   const empty = document.getElementById("receiptListEmpty");
   const body  = document.getElementById("receiptListBody");
+
+  // Save any qty values already entered before rebuilding the DOM
+  const savedQtys = {};
+  receiptItems.forEach((_, i) => {
+    const el = document.getElementById("q" + i);
+    if (el && el.value !== "") savedQtys[i] = el.value;
+  });
+
   if (!receiptItems.length) {
     wrap.style.display  = "none";
     empty.style.display = "block";
@@ -251,6 +259,12 @@ function renderReceiptList() {
         oninput="checkQtyLimit(this)"/></div>
       <div class="icell"><button class="rmv" onclick="removeReceiptItem(${i})" title="Remove">×</button></div>
     </div>`).join("");
+
+  // Restore saved qty values and re-run validation highlights
+  Object.entries(savedQtys).forEach(([i, val]) => {
+    const el = document.getElementById("q" + i);
+    if (el) { el.value = val; checkQtyLimit(el); }
+  });
 }
 
 function clearQ(i) {
