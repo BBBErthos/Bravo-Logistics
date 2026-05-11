@@ -193,9 +193,22 @@ function showAlreadyConfirmed() {
 
 // ── Yard / date change ────────────────────────────────────────────────────────
 async function onYardDateChange() {
-  const yard = document.getElementById("cYard").value;
-  const date = document.getElementById("cDate").value;
+  const yard  = document.getElementById("cYard").value;
+  const date  = document.getElementById("cDate").value;
+  const today = new Date().toISOString().split("T")[0];
+  const dateInput = document.getElementById("cDate");
   selectedSlot = null;
+
+  // Highlight past dates red
+  if (date && date < today) {
+    dateInput.style.borderColor     = "#C62828";
+    dateInput.style.backgroundColor = "rgba(198,40,40,0.06)";
+    dateInput.title = "Date is in the past";
+  } else {
+    dateInput.style.borderColor     = "";
+    dateInput.style.backgroundColor = "";
+    dateInput.title = "";
+  }
 
   if (!yard || !date) {
     document.getElementById("slotArea").innerHTML =
@@ -320,6 +333,8 @@ function validate() {
   const errs = [];
   if (!document.getElementById("cYard").value) errs.push("Select a receiving yard");
   if (!document.getElementById("cDate").value) errs.push("Confirm the delivery date");
+  else if (document.getElementById("cDate").value < new Date().toISOString().split("T")[0])
+                                               errs.push("Delivery date cannot be in the past");
   if (!selectedSlot)                           errs.push("Select a time slot");
   return errs;
 }
