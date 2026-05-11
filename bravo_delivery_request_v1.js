@@ -69,6 +69,7 @@ function setDateLimits() {
   input.max   = fmt(max);
   input.value = fmt(today);
   input.addEventListener("input", checkDateValid);
+  checkDateValid();
 }
 
 function checkDateValid() {
