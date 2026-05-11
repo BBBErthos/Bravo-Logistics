@@ -146,7 +146,9 @@ async function loadPOs() {
 function validate() {
   const errs = [];
   if (!document.getElementById("dPO").value)             errs.push("PO Number is required");
-  if (!document.getElementById("dDate").value)           errs.push("Preferred date is required");
+  if (!document.getElementById("dDate").value)      errs.push("Preferred date is required");
+else if (document.getElementById("dDate").value < new Date().toISOString().split("T")[0])
+                                                   errs.push("Delivery date cannot be in the past");
   if (!document.getElementById("dBOL").value.trim())     errs.push("BOL number is required");
   if (!document.getElementById("dCarrier").value.trim()) errs.push("Carrier company is required");
   const email = document.getElementById("dEmail").value.trim();
