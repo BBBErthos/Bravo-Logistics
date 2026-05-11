@@ -68,6 +68,21 @@ function setDateLimits() {
   input.min   = fmt(today);
   input.max   = fmt(max);
   input.value = fmt(today);
+  input.addEventListener("input", checkDateValid);
+}
+
+function checkDateValid() {
+  const input = document.getElementById("dDate");
+  const today = new Date().toISOString().split("T")[0];
+  if (input.value && input.value < today) {
+    input.style.borderColor     = "#C62828";
+    input.style.backgroundColor = "rgba(198,40,40,0.06)";
+    input.title = "Date is in the past";
+  } else {
+    input.style.borderColor     = "";
+    input.style.backgroundColor = "";
+    input.title = "";
+  }
 }
 
 // ── Load POs ──────────────────────────────────────────────────────────────────
