@@ -306,6 +306,29 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:16
       </div>
     </div>
 
+    <!-- Load Rejected -->
+    <div class="section">
+      <div class="slabel">Load rejection</div>
+      <div style="background:var(--surface);border:2px solid var(--border);border-radius:var(--r);padding:16px">
+        <div class="toggle-row" onclick="document.getElementById('rejectToggle').click()">
+          <label class="toggle" onclick="event.stopPropagation()">
+            <input type="checkbox" id="rejectToggle" onchange="rejectChange()"/>
+            <span class="tslider" style=""></span>
+          </label>
+          <span class="toggle-label" style="color:var(--red)">🚫 Load rejected — no materials received</span>
+        </div>
+        <div id="rejectSection" style="display:none;margin-top:12px">
+          <div style="background:var(--red-dim,#FFEBEE);border:1px solid var(--red);border-radius:var(--r);padding:12px 16px;font-size:13px;color:var(--red)">
+            <strong>All received quantities will be zeroed.</strong> The receipt will be submitted with a Rejected status and no inventory will be updated.
+          </div>
+          <div style="margin-top:12px">
+            <label style="font-size:13px;font-weight:600;color:var(--red);text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px">Reason for rejection</label>
+            <textarea id="rejectReason" placeholder="Describe why the load was rejected (wrong items, damaged beyond acceptance, PO mismatch, etc.)" style="width:100%;padding:12px;border:1px solid var(--red);border-radius:var(--r);font-family:var(--sans);font-size:14px;color:var(--text);background:var(--surface);outline:none;resize:vertical;min-height:72px"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Notes -->
     <div class="section">
       <div class="slabel">Notes</div>
@@ -590,11 +613,28 @@ function renderItemRows() {
 
 // ── Damage toggle ─────────────────────────────────────────────────────────────
 function dmgChange() {
-  const on=document.getElementById("dmgToggle").checked;
-  document.getElementById("dmgSection").style.display=on?"block":"none";
+  const on = document.getElementById("dmgToggle").checked;
+  document.getElementById("dmgSection").style.display = on ? "block" : "none";
+  // Clear all damaged qty inputs when toggle is turned off
+  if (!on) {
+    poItems.forEach((_, i) => {
+      const el = document.getElementById("dq" + i);
+      if (el) el.value = "";
+    });
+  }
 }
 
-// ── Photos ────────────────────────────────────────────────────────────────────
+function rejectChange() {
+  const on = document.getElementById("rejectToggle").checked;
+  document.getElementById("rejectSection").style.display = on ? "block" : "none";
+  const itemsArea = document.getElementById("itemsArea");
+  if (itemsArea) itemsArea.style.opacity = on ? "0.4" : "1";
+  const btn = document.getElementById("subBtn");
+  btn.style.background = on ? "#C62828" : "";
+  btn.textContent = on ? "🚫 Submit Rejected Load" : "✓ Submit Receipt";
+}
+
+
 function handleCapture(event,cat) {
   const files=Array.from(event.target.files);
   files.forEach(file=>{
@@ -639,21 +679,25 @@ async function submitReceipt() {
   const btn=document.getElementById("subBtn");
   if(!selectedDel){toast("No delivery selected","error");return;}
 
+  const isRejected = document.getElementById("rejectToggle").checked;
+  const rejectReason = document.getElementById("rejectReason").value.trim();
+  if (isRejected && !rejectReason) { toast("Please describe the reason for rejection", "error"); return; }
+
   const hasDmg = document.getElementById("dmgToggle").checked;
   const dmgN   = document.getElementById("dmgNotes").value.trim();
   if(hasDmg&&!dmgN){toast("Please describe the damage observed","error");return;}
 
-  // Collect quantities
+  // Collect quantities — zero everything if rejected
   const toSubmit=[];
   poItems.forEach((item,i)=>{
     const gEl=document.getElementById(`gq${i}`);
     const dEl=document.getElementById(`dq${i}`);
-    const gQty=gEl&&gEl.value!==""?parseInt(gEl.value)||0:null;
-    const dQty=dEl&&dEl.value!==""?parseInt(dEl.value)||0:0;
-    if(gQty!==null||(hasDmg&&dQty>0)) toSubmit.push({...item,qty:gQty||0,dmgQty:dQty});
+    const gQty = isRejected ? 0 : (gEl&&gEl.value!==""?parseInt(gEl.value)||0:null);
+    const dQty = isRejected ? 0 : (dEl&&dEl.value!==""?parseInt(dEl.value)||0:0);
+    if(isRejected || gQty!==null||(hasDmg&&dQty>0)) toSubmit.push({...item,qty:gQty||0,dmgQty:dQty});
   });
 
-  if(!toSubmit.some(i=>i.qty>0||i.dmgQty>0)){toast("Enter at least one quantity","error");return;}
+  if(!isRejected && !toSubmit.some(i=>i.qty>0||i.dmgQty>0)){toast("Enter at least one quantity","error");return;}
 
   // Block submit if any good qty exceeds PO qty
   const overQty = [];
@@ -673,9 +717,10 @@ async function submitReceipt() {
 
   const date    = selectedDel.date || new Date().toISOString().split("T")[0];
   const yard    = selectedDel.yard;
-  const dateStr = date.replace(/-/g,"");
-  const poSlug  = (selectedDel.po || "").replace(/[^a-zA-Z0-9]/g,"");
-  const delName = (selectedDel.name || "DEL").replace(/[^a-zA-Z0-9\-]/g,"");
+  const dateStr  = date.replace(/-/g,"").slice(2); // YY+MMDD e.g. 260415
+  const poSlug   = (selectedDel.po || "").replace(/[^a-zA-Z0-9]/g,"");
+  const vendor   = VENDOR_SHORT[selectedDel.po] || poSlug;
+  const delName  = (selectedDel.name || "DEL").replace(/[^a-zA-Z0-9\-]/g,"");
 
   // Count distinct receipt batches for this PO on TODAY only
   // Each day resets to 1 — so DEL-20260415-319_MFG107475, then -02, -03 etc.
@@ -701,7 +746,7 @@ async function submitReceipt() {
   } catch(e) { console.warn("Could not count today's receipts for PO:", e); }
 
   const suffix  = receiptNum > 1 ? `-${String(receiptNum).padStart(2,"0")}` : "";
-  const baseRef = `${delName}_${poSlug}${suffix}${hasDmg?"-DAMAGE":""}`;
+  const baseRef = `${delName}_${vendor}${suffix}${hasDmg?"-DAMAGE":""}`;
   const groupId = YARD_GROUPS[yard]||null;
   const spFolder= `${SP_BASE_FOLDER}/${baseRef}`;
 
@@ -735,8 +780,9 @@ async function submitReceipt() {
     } catch(e){toast(`${item.itemNumber} failed: ${e.message}`,"error");}
   }
 
-  // Phase 2: Update MM inventory (40-65%)
+  // Phase 2: Update MM inventory (40-65%) — skip if load was rejected
   progLbl.textContent="Updating inventory...";
+  if (!isRejected) {
   for(let i=0;i<toSubmit.length;i++){
     pfill.style.width=(40+(i/toSubmit.length)*25)+"%";
     const item=toSubmit[i];
@@ -759,6 +805,7 @@ async function submitReceipt() {
       }
     }
   }
+  } // end if (!isRejected)
 
   // Phase 3: Upload photos to SP + write recRef to Delivery Schedule (65-85%)
   progLbl.textContent="Saving photos...";
@@ -796,9 +843,9 @@ async function submitReceipt() {
   const pdfFileName=`${baseRef}-Receipt.pdf`;
   const spBaseUrl=`https://${SP_TENANT}.sharepoint.com/sites${SP_SITE_PATH}/${SP_LIBRARY}/${spFolder}`;
   try{
-    const formData={date,yard,type:"Delivery",po:selectedDel.po,bol:selectedDel.bol,
+    const formData={date,yard,type:isRejected?"Rejected":"Delivery",po:selectedDel.po,bol:selectedDel.bol,
                     leader:"",dmg:hasDmg?"Damage Noted":"No Damage",dmgN,notes:"",
-                    baseRef,hasDmg};
+                    baseRef,hasDmg,isRejected,rejectReason};
     const doc=await generatePDF(formData,toSubmit,photos,fileNames,spBaseUrl,pdfFileName);
     pfill.style.width="92%";
     if(SP_ENABLED&&spToken){

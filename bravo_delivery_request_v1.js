@@ -17,7 +17,9 @@ const DEL_COL = {
   status:   "color_mm21zhcs",
   date:     "date_mm21td8v",
   poNumber: "text_mm29xaqd",
-  yard:     "color_mm29fpxq"
+  yard:     "color_mm29fpxq",
+  notes:    "long_text_mm39gxdb",
+  driver:   "text_mm39g4nd"  // ← replace with actual column ID once added to board
 };
 
 // Confirm form base URL — update if hosted elsewhere
@@ -30,6 +32,8 @@ let _inited = false;
 async function init() {
   if (_inited) return;
   _inited = true;
+  const user = await requireAuth();
+  if (!user && typeof AUTH_ENABLED !== "undefined" && AUTH_ENABLED) return;
   setDateLimits();
   genId();
   await loadPOs();
@@ -68,22 +72,6 @@ function setDateLimits() {
   input.min   = fmt(today);
   input.max   = fmt(max);
   input.value = fmt(today);
-  input.addEventListener("input", checkDateValid);
-  checkDateValid();
-}
-
-function checkDateValid() {
-  const input = document.getElementById("dDate");
-  const today = new Date().toISOString().split("T")[0];
-  if (input.value && input.value < today) {
-    input.style.borderColor     = "#C62828";
-    input.style.backgroundColor = "rgba(198,40,40,0.06)";
-    input.title = "Date is in the past";
-  } else {
-    input.style.borderColor     = "";
-    input.style.backgroundColor = "";
-    input.title = "";
-  }
 }
 
 // ── Load POs ──────────────────────────────────────────────────────────────────
@@ -147,11 +135,10 @@ async function loadPOs() {
 function validate() {
   const errs = [];
   if (!document.getElementById("dPO").value)             errs.push("PO Number is required");
-  if (!document.getElementById("dDate").value)      errs.push("Preferred date is required");
-else if (document.getElementById("dDate").value < new Date().toISOString().split("T")[0])
-                                                   errs.push("Delivery date cannot be in the past");
+  if (!document.getElementById("dDate").value)           errs.push("Preferred date is required");
   if (!document.getElementById("dBOL").value.trim())     errs.push("BOL number is required");
   if (!document.getElementById("dCarrier").value.trim()) errs.push("Carrier company is required");
+  if (!document.getElementById("dDriver").value.trim())  errs.push("Driver name is required");
   const email = document.getElementById("dEmail").value.trim();
   if (!email)                                            errs.push("Email address is required");
   else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))   errs.push("Please enter a valid email address");
@@ -172,6 +159,7 @@ async function submitRequest() {
   const carrier = document.getElementById("dCarrier").value.trim();
   const email   = document.getElementById("dEmail").value.trim();
   const notes   = document.getElementById("dNotes").value.trim();
+  const driver  = document.getElementById("dDriver").value.trim();
   const dateStr = date.replace(/-/g, "");
   // Get sequential number for today
   const todayCount = await getTodayDeliveryCount(date);
@@ -189,7 +177,9 @@ async function submitRequest() {
 
     // PO Number — plain text column
     const poVal = document.getElementById("dPO").value;
-    if (poVal) colVals[DEL_COL.poNumber] = poVal;
+    if (poVal)  colVals[DEL_COL.poNumber] = poVal;
+    if (notes)  colVals[DEL_COL.notes]    = notes;
+    if (driver) colVals[DEL_COL.driver]   = driver;
 
     const result = await gql(
       `mutation($b:ID!,$g:String!,$n:String!,$cv:JSON!){create_item(board_id:$b,group_id:$g,item_name:$n,column_values:$cv){id name}}`,
@@ -204,6 +194,7 @@ async function submitRequest() {
       reference:      ref,
       preferred_date: date,
       po_number:      po,
+      driver:         driver,
       carrier:        carrier,
       bol:            bol,
       carrier_email:  email,
@@ -238,7 +229,7 @@ function reset() {
 function clearForm() {
   setDateLimits();
   document.getElementById("dPO").selectedIndex = 0;
-  ["dBOL","dCarrier","dEmail","dNotes"].forEach(id => document.getElementById(id).value = "");
+  ["dBOL","dCarrier","dEmail","dNotes","dDriver"].forEach(id => document.getElementById(id).value = "");
   document.getElementById("subBtn").disabled    = false;
   document.getElementById("subBtn").textContent = "Submit delivery request";
 }

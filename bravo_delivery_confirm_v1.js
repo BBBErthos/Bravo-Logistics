@@ -11,6 +11,8 @@ const DEL_COL = {
   carrier:  "text_mm21mxr7",
   email:    "text_mm21nbps",
   timeSlot: "text_mm2973m4",
+  notes:    "long_text_mm39gxdb",
+  driver:   "text_mm39g4nd",  // ← replace with actual column ID
   status:   "color_mm21zhcs",
   date:     "date_mm21td8v",
   poNumber: "text_mm29xaqd",
@@ -144,7 +146,9 @@ async function loadRequest() {
     carrier:  cv[DEL_COL.carrier]  || "—",
     bol:      cv[DEL_COL.bol]      || "—",
     email:    cv[DEL_COL.email]    || "—",
-    status:   cv[DEL_COL.status]   || "—"
+    status:   cv[DEL_COL.status]   || "—",
+    notes:    cv[DEL_COL.notes]    || "",
+    driver:   cv[DEL_COL.driver]   || ""
   };
 
   // Check if already confirmed
@@ -161,6 +165,16 @@ async function loadRequest() {
   document.getElementById("reqBOL").textContent     = requestData.bol;
   document.getElementById("reqEmail").textContent   = requestData.email;
   document.getElementById("reqStatus").textContent  = requestData.status;
+  document.getElementById("reqDriver").textContent  = requestData.driver || "—";
+  // Notes — only show section if notes exist
+  const notesEl = document.getElementById("reqNotes");
+  const notesWrap = document.getElementById("reqNotesWrap");
+  if (requestData.notes) {
+    notesEl.textContent = requestData.notes;
+    notesWrap.style.display = "block";
+  } else {
+    notesWrap.style.display = "none";
+  }
 
   // Pre-fill date with dispatcher's preferred date
   if (requestData.date) {

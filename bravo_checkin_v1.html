@@ -182,8 +182,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:16
 <script src="auth.js"></script>
 <script>
 // ── Config ────────────────────────────────────────────────────────────────────
-const TOKEN    = BRAVO_CONFIG.TOKEN;
-const DEL_BOARD = BRAVO_CONFIG.DEL_BOARD;
+const TOKEN     = BRAVO_CONFIG.TOKEN;
+const DEL_BOARD = "18407062173";
 
 const DEL_COL = {
   bol:       "text_mm21d399",
@@ -194,7 +194,8 @@ const DEL_COL = {
   date:      "date_mm21td8v",
   poNumber:  "text_mm29xaqd",
   yard:      "color_mm29fpxq",
-  recRef:    "text_mm2d6dw2"
+  recRef:    "text_mm2d6dw2",
+  driver:    "text_mm39g4nd"  // ← replace with actual column ID
 };
 
 let deliveries    = [];
@@ -268,6 +269,7 @@ async function loadDeliveries() {
           po:       cv[DEL_COL.poNumber],
           carrier:  cv[DEL_COL.carrier],
           bol:      cv[DEL_COL.bol],
+          driver:   cv[DEL_COL.driver] || "",
           status:   itemStatus
         });
       }
@@ -333,6 +335,10 @@ function renderDeliveryList() {
           <div class="dc-value">${del.bol || "—"}</div>
         </div>
         <div class="dc-field">
+          <div class="dc-label">Driver</div>
+          <div class="dc-value">${del.driver || "—"}</div>
+        </div>
+        <div class="dc-field">
           <div class="dc-label">Status</div>
           <div class="dc-value"><span class="dc-status scheduled">Scheduled</span></div>
         </div>
@@ -356,7 +362,8 @@ function selectDelivery(del) {
     <div class="confirm-row"><span>Receiving Yard</span><span>${del.yard || "—"}</span></div>
     <div class="confirm-row"><span>PO Number</span><span>${del.po || "—"}</span></div>
     <div class="confirm-row"><span>Carrier</span><span>${del.carrier || "—"}</span></div>
-    <div class="confirm-row"><span>BOL #</span><span>${del.bol || "—"}</span></div>`;
+    <div class="confirm-row"><span>BOL #</span><span>${del.bol || "—"}</span></div>
+    <div class="confirm-row"><span>Driver</span><span>${del.driver || "—"}</span></div>`;
 
   document.getElementById("confirmPanel").classList.add("vis");
   // Scroll to confirm panel
