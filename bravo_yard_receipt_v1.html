@@ -748,36 +748,30 @@ async function submitReceipt() {
 
   const date    = selectedDel.date || new Date().toISOString().split("T")[0];
   const yard    = selectedDel.yard;
-  const dateStr  = date.replace(/-/g,"").slice(2); // YY+MMDD e.g. 260415
-  const poSlug   = (selectedDel.po || "").replace(/[^a-zA-Z0-9]/g,"");
-  const vendor   = VENDOR_SHORT[selectedDel.po] || poSlug;
-  const delName  = (selectedDel.name || "DEL").replace(/[^a-zA-Z0-9\-]/g,"");
+  // File naming: Vendor_PO#_ddMmmYY_NN
+  const po       = (selectedDel.po || "").replace(/[^a-zA-Z0-9]/g,"");
+  const vendor   = VENDOR_SHORT[selectedDel.po] || po;
+  const MONTHS   = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const dObj     = new Date(date + "T12:00:00");
+  const ddMmmYY  = String(dObj.getDate()).padStart(2,"0") + MONTHS[dObj.getMonth()] + String(dObj.getFullYear()).slice(2);
 
   // Count distinct receipt batches for this PO on TODAY only
   // Each day resets to 1 — so DEL-20260415-319_MFG107475, then -02, -03 etc.
   // Tomorrow starts fresh at DEL-20260416-XXX_MFG107475
-  let receiptNum = 1;
+  // Count how many receipts already exist for this PO+date to get sequence number
+  let seqNum = 1;
   try {
-    const todayStr = date.replace(/-/g,""); // e.g. "20260415"
-    const existing = await gql(`query{boards(ids:[${REC_BOARD}]){items_page(limit:500){items{name column_values{id text}}}}}`);
-    const todayPoItems = existing.boards[0].items_page.items.filter(item => {
+    const existing = await gql(`query{boards(ids:[${REC_BOARD}]){items_page(limit:500){items{column_values{id text}}}}}`);
+    const matches = existing.boards[0].items_page.items.filter(item => {
       const cv = {};
       item.column_values.forEach(c => { cv[c.id] = c.text || ""; });
-      // Match PO and today's date
-      return cv[REC_COL.poNumber] === selectedDel.po
-          && cv[REC_COL.date] === date;
+      return cv[REC_COL.poNumber] === selectedDel.po && cv[REC_COL.date] === date;
     });
-    // Count unique baseRefs — strip trailing -NN line item index to get the batch ref
-    const uniqueRefs = new Set(todayPoItems.map(item => {
-      const parts = item.name.split("-");
-      if (/^\d{2}$/.test(parts[parts.length - 1])) parts.pop();
-      return parts.join("-");
-    }));
-    receiptNum = uniqueRefs.size + 1;
-  } catch(e) { console.warn("Could not count today's receipts for PO:", e); }
+    seqNum = matches.length + 1;
+  } catch(e) { console.warn("Could not count existing receipts:", e); }
 
-  const suffix  = receiptNum > 1 ? `-${String(receiptNum).padStart(2,"0")}` : "";
-  const baseRef = `${delName}_${vendor}${suffix}${hasDmg?"-DAMAGE":""}`;
+  const seqStr  = String(seqNum).padStart(2,"0");
+  const baseRef = `${vendor}_${po}_${ddMmmYY}_${seqStr}${hasDmg?"-DMG":""}${isRejected?"-REJ":""}`;
   const groupId = YARD_GROUPS[yard]||null;
   const spFolder= `${SP_BASE_FOLDER}/${baseRef}`;
 
@@ -871,7 +865,7 @@ async function submitReceipt() {
   // Generate PDF (80-92%)
   progLbl.textContent="Generating PDF...";
   pfill.style.width="80%";
-  const pdfFileName=`${baseRef}-Receipt.pdf`;
+  const pdfFileName=`${baseRef}.pdf`;
   const spBaseUrl=`https://${SP_TENANT}.sharepoint.com/sites${SP_SITE_PATH}/${SP_LIBRARY}/${spFolder}`;
   try{
     const formData={date,yard,type:isRejected?"Rejected":"Delivery",po:selectedDel.po,bol:selectedDel.bol,
