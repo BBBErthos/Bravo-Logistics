@@ -8,14 +8,14 @@
 // FORMS USING AUTH (internal staff only):
 //   auth.js + requireAuth() in init():
 //   ✓ index.html
-//   ✓ bravo_checkin_v1.html          — Gate Marshal
-//   ✓ bravo_yard_receipt_v1.html     — Yard Lead
-//   ✓ bravo_receipt_no_appt_v1.html  — Admin/standalone
-//   ✓ bravo_mtf_form_v3.html         — Yard Lead
+//   ✓ bravo_checkin_v2.html          — Gate Marshal
+//   ✓ bravo_yard_receipt_v2.html     — Yard Lead
+//   ✓ bravo_receipt_no_appt_v2.html  — Admin/standalone
+//   ✓ bravo_mtf_form_v4.html         — Yard Lead
 //
 // FORMS WITHOUT AUTH (external/public):
 //   ✗ bravo_delivery_request_v1.html — Dispatcher/carrier (external)
-//   ✗ bravo_delivery_confirm_v1.html — Coordinator (email link, no login)
+//   ✗ bravo_delivery_confirm_v2.html — Coordinator (email link, no login)
 //
 // Required from IT / Azure Portal:
 //   TENANT_ID  — Azure Active Directory Tenant ID
