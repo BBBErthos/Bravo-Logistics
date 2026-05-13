@@ -32,3 +32,40 @@ const BRAVO_CONFIG = {
   // ── URLs ────────────────────────────────────────────────────────────────────
   CONFIRM_BASE_URL: "https://bbberthos.github.io/Bravo-Logistics/bravo_delivery_confirm_v1.html"
 };
+
+// ── Tooltip handler (shared across all forms) ─────────────────────────────────
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('.info-btn');
+  if (btn) {
+    e.stopPropagation();
+    const isActive = btn.classList.contains('active');
+    document.querySelectorAll('.info-btn.active').forEach(b => {
+      b.classList.remove('active');
+      const t = b.nextElementSibling;
+      if (t && t.classList.contains('info-tip')) t.classList.remove('show');
+    });
+    if (!isActive) {
+      btn.classList.add('active');
+      const tip = btn.nextElementSibling;
+      if (tip && tip.classList.contains('info-tip')) {
+        tip.classList.add('show');
+        const rect = btn.getBoundingClientRect();
+        const vw = window.innerWidth;
+        let left = rect.left + rect.width / 2 - 130;
+        let top  = rect.top - 10;
+        if (left < 12) left = 12;
+        if (left + 260 > vw - 12) left = vw - 272;
+        top = rect.top < 120 ? rect.bottom + 10 : rect.top - tip.offsetHeight - 10;
+        if (top < 10) top = rect.bottom + 10;
+        tip.style.left = left + 'px';
+        tip.style.top  = top  + 'px';
+      }
+    }
+  } else {
+    document.querySelectorAll('.info-btn.active').forEach(b => {
+      b.classList.remove('active');
+      const t = b.nextElementSibling;
+      if (t && t.classList.contains('info-tip')) t.classList.remove('show');
+    });
+  }
+});

@@ -10,8 +10,7 @@
 //   ✓ index.html
 //   ✓ bravo_checkin_v1.html          — Gate Marshal
 //   ✓ bravo_yard_receipt_v1.html     — Yard Lead
-//   ✓ bravo_checkout_v1.html         — Gate Marshal
-//   ✓ bravo_receipt_form_v5.html     — Admin/standalone
+//   ✓ bravo_receipt_no_appt_v1.html  — Admin/standalone
 //   ✓ bravo_mtf_form_v3.html         — Yard Lead
 //
 // FORMS WITHOUT AUTH (external/public):
