@@ -30,7 +30,7 @@ const BRAVO_CONFIG = {
   EJS_CONFIRM_TPL:  "template_a4j8kyk",   // Delivery confirmation
 
   // ── URLs ────────────────────────────────────────────────────────────────────
-  CONFIRM_BASE_URL: "https://bbberthos.github.io/Bravo-Logistics/bravo_delivery_confirm_v1.html"
+  CONFIRM_BASE_URL: "https://bbberthos.github.io/Bravo-Logistics/bravo_delivery_confirm_v2.html"
 };
 
 // ── Tooltip handler (shared across all forms) ─────────────────────────────────
