@@ -748,12 +748,10 @@ async function submitReceipt() {
 
   const date    = selectedDel.date || new Date().toISOString().split("T")[0];
   const yard    = selectedDel.yard;
-  // File naming: Vendor_PO#_ddMmmYY_NN
+  // File naming: PO#_yyyymmdd_Vendor_NN_(DMG/REJ)
   const po       = (selectedDel.po || "").replace(/[^a-zA-Z0-9]/g,"");
   const vendor   = VENDOR_SHORT[selectedDel.po] || po;
-  const MONTHS   = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  const dObj     = new Date(date + "T12:00:00");
-  const ddMmmYY  = String(dObj.getDate()).padStart(2,"0") + MONTHS[dObj.getMonth()] + String(dObj.getFullYear()).slice(2);
+  const dateStr  = date.replace(/-/g,""); // yyyymmdd e.g. 20260506
 
   // Count distinct receipt batches for this PO on TODAY only
   // Each day resets to 1 — so DEL-20260415-319_MFG107475, then -02, -03 etc.
@@ -771,7 +769,7 @@ async function submitReceipt() {
   } catch(e) { console.warn("Could not count existing receipts:", e); }
 
   const seqStr  = String(seqNum).padStart(2,"0");
-  const baseRef = `${vendor}_${po}_${ddMmmYY}_${seqStr}${hasDmg?"-DMG":""}${isRejected?"-REJ":""}`;
+  const baseRef = `${po}_${dateStr}_${vendor}_${seqStr}${hasDmg?"-DMG":""}${isRejected?"-REJ":""}`;
   const groupId = YARD_GROUPS[yard]||null;
   const spFolder= `${SP_BASE_FOLDER}/${baseRef}`;
 
